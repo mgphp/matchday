@@ -49,8 +49,12 @@ matchday
 │   │   ├── index.tsx    # Matches
 │   │   ├── table.tsx
 │   │   └── squad.tsx
-│   ├── components     # shared themed UI: Screen, Card, Button, Badge
+│   ├── components     # shared themed UI: Screen, Card, Button, Badge, MatchCard, StateView
 │   │   └── __tests__
+│   ├── lib
+│   │   ├── data       # repository interface + mock data source
+│   │   ├── types.ts   # domain models (Match, Standing, Player)
+│   │   └── use-data.ts # async data hook (loading/error/success)
 │   └── theme
 │       ├── theme.ts   # design tokens (colors, spacing, radii, typography)
 │       └── __tests__
