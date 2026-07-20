@@ -65,6 +65,16 @@ matchday
 └── package.json
 ```
 
+## Builds
+
+Cloud builds via [EAS](https://docs.expo.dev/build/introduction/) — profiles in `eas.json`:
+
+```bash
+npx eas build --profile development  # dev client, internal distribution
+npx eas build --profile preview     # internal distribution
+npx eas build --profile production  # store build, auto-incremented version
+```
+
 ## Theme
 
 Dark "pitch green" theme defined in [`src/theme/theme.ts`](src/theme/theme.ts):

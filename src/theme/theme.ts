@@ -29,8 +29,8 @@ export const colors = {
   text: '#e8f2ec',
   /** Secondary / supporting text */
   textSecondary: '#9db8aa',
-  /** Disabled / placeholder text */
-  textDisabled: '#5d7568',
+  /** Disabled / placeholder text (WCAG AA ≥4.5:1 on background and surface) */
+  textDisabled: '#7d9488',
   /** Text on accent-colored fills */
   textOnAccent: '#04231f',
 
