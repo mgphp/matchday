@@ -1,33 +1,46 @@
-import { Stack } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, spacing, typography } from '@/theme/theme';
+import { Badge } from '@/components/badge';
+import { Button } from '@/components/button';
+import { Card } from '@/components/card';
+import { Screen } from '@/components/screen';
+import { colors, typography } from '@/theme/theme';
 
-export default function HomeScreen() {
+export default function MatchesScreen() {
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Matchday' }} />
-      <Text style={styles.title}>Matchday</Text>
-      <Text style={styles.subtitle}>Project setup complete. Kick-off soon.</Text>
-    </View>
+    <Screen>
+      <Card>
+        <View style={styles.row}>
+          <Badge label="LIVE 62'" variant="live" />
+          <Text style={styles.competition}>Premier League</Text>
+        </View>
+        <Text style={styles.fixture}>Home FC 1 – 0 Away United</Text>
+        <Button label="Match centre" />
+      </Card>
+      <Card>
+        <View style={styles.row}>
+          <Badge label="Today 17:30" />
+          <Text style={styles.competition}>Premier League</Text>
+        </View>
+        <Text style={styles.fixture}>Rovers v City</Text>
+        <Button label="Preview" variant="secondary" />
+      </Card>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-    gap: spacing.sm,
-    padding: spacing.lg,
+    justifyContent: 'space-between',
   },
-  title: {
-    ...typography.title,
-    color: colors.accent,
-  },
-  subtitle: {
-    ...typography.body,
+  competition: {
+    ...typography.caption,
     color: colors.textSecondary,
+  },
+  fixture: {
+    ...typography.heading,
+    color: colors.text,
   },
 });
