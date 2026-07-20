@@ -34,10 +34,24 @@ function scoreline(match: Match) {
   return `${match.home.name} ${match.homeScore} – ${match.awayScore} ${match.away.name}`;
 }
 
+function statusText(match: Match) {
+  switch (match.status) {
+    case 'live':
+      return `live, minute ${match.minute}`;
+    case 'postponed':
+      return 'postponed';
+    case 'finished':
+      return 'full time';
+    case 'scheduled':
+      return `kick-off ${kickoffLabel(match.kickoff)}`;
+  }
+}
+
 export function MatchCard({ match, onPress }: { match: Match; onPress?: () => void }) {
   return (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={`${scoreline(match)}, ${match.competition}, ${statusText(match)}`}
       onPress={onPress}
       disabled={!onPress}
       style={({ pressed }) => pressed && styles.pressed}

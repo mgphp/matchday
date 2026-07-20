@@ -14,7 +14,7 @@ export function StateView(props: StateViewProps) {
   return (
     <View style={styles.container}>
       {props.state === 'loading' ? (
-        <ActivityIndicator color={colors.accent} size="large" />
+        <ActivityIndicator accessibilityLabel="Loading" color={colors.accent} size="large" />
       ) : (
         <>
           <Text style={styles.message}>

@@ -34,6 +34,14 @@ describe('MatchCard', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
+  it('exposes a descriptive accessibility label', async () => {
+    const live: Match = { ...base, status: 'live', homeScore: 1, awayScore: 0, minute: 62 };
+    const { getByLabelText } = await render(<MatchCard match={live} onPress={() => {}} />);
+    expect(
+      getByLabelText('Northgate Rovers 1 – 0 Harbour City, Premier League, live, minute 62'),
+    ).toBeTruthy();
+  });
+
   it('shows the amber postponed badge', async () => {
     const postponed: Match = { ...base, status: 'postponed' };
     const { getByText } = await render(<MatchCard match={postponed} />);
