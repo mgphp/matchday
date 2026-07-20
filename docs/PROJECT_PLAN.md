@@ -50,11 +50,14 @@ matchday
 - [x] Shared themed components: `Screen`, `Card`, `Button`, `Badge`
 - [x] Component tests via `@testing-library/react-native`
 
-### M2 — Data layer
+### M2 — Data layer ✅ (2026-07-20, mock-backed)
 
-- [ ] Choose and integrate fixtures/results data source
-- [ ] Data fetching + caching strategy
-- [ ] Loading/error/empty states using theme tokens
+- [x] Repository interface (`src/lib/data`) with mock implementation — real
+      fixtures/results API deferred; swap point is `src/lib/data/index.ts`
+- [x] Data fetching via `useData` hook (loading/error/success + reload)
+- [x] Loading/error/empty states using theme tokens (`StateView`)
+- [x] Matches, Table and Squad screens driven by repository data
+- [ ] Real data source integration (decision pending)
 
 ### M3 — Match experience
 
