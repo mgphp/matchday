@@ -1,6 +1,10 @@
 import { render } from '@testing-library/react-native';
 
-import MatchesScreen from '@/app/index';
+import MatchesScreen from '@/app/(tabs)/index';
+
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: jest.fn() }),
+}));
 
 describe('MatchesScreen', () => {
   it('renders fixtures from the repository after loading', async () => {

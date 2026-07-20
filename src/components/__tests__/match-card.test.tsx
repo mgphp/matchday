@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react-native';
+import { render, userEvent } from '@testing-library/react-native';
 
 import type { Match } from '@/lib/types';
 
@@ -25,6 +25,13 @@ describe('MatchCard', () => {
     const { getByText } = await render(<MatchCard match={live} />);
     expect(getByText("LIVE 62'")).toBeTruthy();
     expect(getByText('Northgate Rovers 1 – 0 Harbour City')).toBeTruthy();
+  });
+
+  it('calls onPress when tapped', async () => {
+    const onPress = jest.fn();
+    const { getByRole } = await render(<MatchCard match={base} onPress={onPress} />);
+    await userEvent.press(getByRole('button'));
+    expect(onPress).toHaveBeenCalledTimes(1);
   });
 
   it('shows the amber postponed badge', async () => {

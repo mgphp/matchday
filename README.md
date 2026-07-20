@@ -45,10 +45,9 @@ npm test           # tests
 matchday
 ├── src
 │   ├── app            # expo-router routes (file-based routing)
-│   │   ├── _layout.tsx  # tab navigation (Matches / Table / Squad)
-│   │   ├── index.tsx    # Matches
-│   │   ├── table.tsx
-│   │   └── squad.tsx
+│   │   ├── _layout.tsx  # root stack
+│   │   ├── (tabs)       # tab navigation: Matches / Table / Squad
+│   │   └── match/[id].tsx # match centre (events, lineups, live polling)
 │   ├── components     # shared themed UI: Screen, Card, Button, Badge, MatchCard, StateView
 │   │   └── __tests__
 │   ├── lib

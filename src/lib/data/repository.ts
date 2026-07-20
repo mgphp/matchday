@@ -1,4 +1,4 @@
-import type { Match, Player, Standing } from '@/lib/types';
+import type { Match, MatchDetail, Player, Standing } from '@/lib/types';
 
 /**
  * Data source contract for the app. Screens depend on this interface only,
@@ -6,6 +6,8 @@ import type { Match, Player, Standing } from '@/lib/types';
  */
 export interface MatchdayRepository {
   getFixtures(): Promise<Match[]>;
+  /** Rejects when no match exists for the id. */
+  getMatch(id: string): Promise<MatchDetail>;
   getTable(): Promise<Standing[]>;
   getSquad(): Promise<Player[]>;
 }
