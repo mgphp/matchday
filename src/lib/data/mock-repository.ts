@@ -1,4 +1,4 @@
-import type { Match, Player, Standing, Team } from '@/lib/types';
+import type { Lineups, Match, MatchEvent, Player, Standing, Team } from '@/lib/types';
 
 import type { MatchdayRepository } from './repository';
 
@@ -124,6 +124,48 @@ const squad: Player[] = [
   { id: 'p7', name: 'Andrés Vidal', position: 'FW', squadNumber: 11 },
 ];
 
+const events: Record<string, MatchEvent[]> = {
+  m1: [
+    {
+      id: 'e1',
+      minute: 34,
+      type: 'goal',
+      player: 'Jamie Cole',
+      side: 'home',
+      detail: 'assist Ryo Tanaka',
+    },
+    { id: 'e2', minute: 51, type: 'yellow-card', player: 'Owen Prescott', side: 'away' },
+    {
+      id: 'e3',
+      minute: 58,
+      type: 'substitution',
+      player: 'Andrés Vidal',
+      side: 'home',
+      detail: 'for Theo Banks',
+    },
+  ],
+  m4: [
+    { id: 'e4', minute: 12, type: 'goal', player: 'Callum Reed', side: 'home' },
+    { id: 'e5', minute: 27, type: 'goal', player: 'Jamie Cole', side: 'away' },
+    { id: 'e6', minute: 66, type: 'red-card', player: 'Marcus Bell', side: 'home' },
+    { id: 'e7', minute: 79, type: 'goal', player: 'Callum Reed', side: 'home' },
+    { id: 'e8', minute: 90, type: 'goal', player: 'Ryo Tanaka', side: 'away' },
+  ],
+};
+
+const lineups: Record<string, Lineups> = {
+  m1: {
+    home: squad.slice(0, 5),
+    away: [
+      { id: 'a1', name: 'Owen Prescott', position: 'DF', squadNumber: 4 },
+      { id: 'a2', name: 'Felix Ndiaye', position: 'GK', squadNumber: 13 },
+      { id: 'a3', name: 'Tomás Herrera', position: 'MF', squadNumber: 6 },
+      { id: 'a4', name: 'Billy Craven', position: 'FW', squadNumber: 7 },
+      { id: 'a5', name: 'Aaron Doyle', position: 'DF', squadNumber: 3 },
+    ],
+  },
+};
+
 /** Simulated network latency so loading states are visible in the app. */
 const LATENCY_MS = 300;
 
@@ -133,6 +175,13 @@ function respond<T>(data: T): Promise<T> {
 
 export const mockRepository: MatchdayRepository = {
   getFixtures: () => respond(fixtures),
+  getMatch: (id) => {
+    const match = fixtures.find((fixture) => fixture.id === id);
+    if (!match) {
+      return Promise.reject(new Error(`No match with id ${id}`));
+    }
+    return respond({ ...match, events: events[id] ?? [], lineups: lineups[id] });
+  },
   getTable: () => respond(table),
   getSquad: () => respond(squad),
 };

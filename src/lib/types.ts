@@ -39,3 +39,26 @@ export interface Player {
   position: PlayerPosition;
   squadNumber: number;
 }
+
+export type MatchEventType = 'goal' | 'yellow-card' | 'red-card' | 'substitution';
+
+export interface MatchEvent {
+  id: string;
+  minute: number;
+  type: MatchEventType;
+  player: string;
+  side: 'home' | 'away';
+  /** e.g. assist or player coming off */
+  detail?: string;
+}
+
+export interface Lineups {
+  home: Player[];
+  away: Player[];
+}
+
+export interface MatchDetail extends Match {
+  events: MatchEvent[];
+  /** Absent until teams are announced */
+  lineups?: Lineups;
+}

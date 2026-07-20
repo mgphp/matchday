@@ -59,11 +59,13 @@ matchday
 - [x] Matches, Table and Squad screens driven by repository data
 - [ ] Real data source integration (decision pending)
 
-### M3 — Match experience
+### M3 — Match experience ✅ (2026-07-20, mock-backed)
 
-- [ ] Match detail screen (lineups, events, score)
-- [ ] Live match states — amber alert tokens for live/important events
-- [ ] Pull-to-refresh and background refresh
+- [x] Match detail screen at `/match/[id]` (score header, events timeline, lineups)
+- [x] Live match states — amber live badge with minute, amber/red card icons,
+      postponed alert badge
+- [x] Pull-to-refresh (Matches list + match detail) and 30s background polling
+      while a match is live
 
 ### M4 — Polish & release
 

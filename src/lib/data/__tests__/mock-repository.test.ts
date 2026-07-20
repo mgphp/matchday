@@ -18,6 +18,18 @@ describe('mockRepository', () => {
     expect(points).toEqual([...points].sort((a, b) => b - a));
   });
 
+  it('returns match detail with events and lineups for the live match', async () => {
+    const detail = await mockRepository.getMatch('m1');
+    expect(detail.status).toBe('live');
+    expect(detail.events.length).toBeGreaterThan(0);
+    expect(detail.lineups?.home.length).toBeGreaterThan(0);
+    expect(detail.lineups?.away.length).toBeGreaterThan(0);
+  });
+
+  it('rejects for an unknown match id', async () => {
+    await expect(mockRepository.getMatch('nope')).rejects.toThrow('No match with id nope');
+  });
+
   it('returns a squad with unique squad numbers', async () => {
     const squad = await mockRepository.getSquad();
     const numbers = squad.map((player) => player.squadNumber);

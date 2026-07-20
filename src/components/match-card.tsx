@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, typography } from '@/theme/theme';
 import type { Match } from '@/lib/types';
@@ -34,19 +34,29 @@ function scoreline(match: Match) {
   return `${match.home.name} ${match.homeScore} – ${match.awayScore} ${match.away.name}`;
 }
 
-export function MatchCard({ match }: { match: Match }) {
+export function MatchCard({ match, onPress }: { match: Match; onPress?: () => void }) {
   return (
-    <Card>
-      <View style={styles.row}>
-        {statusBadge(match)}
-        <Text style={styles.competition}>{match.competition}</Text>
-      </View>
-      <Text style={styles.fixture}>{scoreline(match)}</Text>
-    </Card>
+    <Pressable
+      accessibilityRole={onPress ? 'button' : undefined}
+      onPress={onPress}
+      disabled={!onPress}
+      style={({ pressed }) => pressed && styles.pressed}
+    >
+      <Card>
+        <View style={styles.row}>
+          {statusBadge(match)}
+          <Text style={styles.competition}>{match.competition}</Text>
+        </View>
+        <Text style={styles.fixture}>{scoreline(match)}</Text>
+      </Card>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  pressed: {
+    opacity: 0.8,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
