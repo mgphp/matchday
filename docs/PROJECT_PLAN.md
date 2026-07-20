@@ -44,11 +44,11 @@ matchday
       `prettier --check`, `jest` on every PR and push to `main`
 - [ ] CONTRIBUTING.md with workflow conventions
 
-### M1 — Navigation shell & core UI
+### M1 — Navigation shell & core UI ✅ (2026-07-20)
 
-- [ ] Tab navigation: Matches, Table, Squad
-- [ ] Shared themed components: `Screen`, `Card`, `Button`, `Badge`
-- [ ] Component tests via `@testing-library/react-native`
+- [x] Tab navigation: Matches, Table, Squad
+- [x] Shared themed components: `Screen`, `Card`, `Button`, `Badge`
+- [x] Component tests via `@testing-library/react-native`
 
 ### M2 — Data layer
 
