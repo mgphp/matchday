@@ -1,13 +1,30 @@
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { SectionList, StyleSheet, Text, View } from 'react-native';
 
 import { Badge } from '@/components/badge';
 import { Card } from '@/components/card';
 import { Screen } from '@/components/screen';
 import { StateView } from '@/components/state-view';
 import { repository } from '@/lib/data';
-import type { Player } from '@/lib/types';
+import type { Player, PlayerPosition } from '@/lib/types';
 import { useData } from '@/lib/use-data';
 import { colors, spacing, typography } from '@/theme/theme';
+
+const POSITION_ORDER: PlayerPosition[] = ['GK', 'DF', 'MF', 'FW'];
+
+const POSITION_LABELS: Record<PlayerPosition, string> = {
+  GK: 'Goalkeepers',
+  DF: 'Defenders',
+  MF: 'Midfielders',
+  FW: 'Forwards',
+};
+
+function groupByPosition(players: Player[]) {
+  return POSITION_ORDER.map((position) => ({
+    position,
+    title: POSITION_LABELS[position],
+    data: players.filter((player) => player.position === position),
+  })).filter((section) => section.data.length > 0);
+}
 
 function PlayerRow({ player }: { player: Player }) {
   return (
@@ -32,11 +49,16 @@ export default function SquadScreen() {
         <StateView state="empty" message="No players in the squad." />
       ) : (
         <Card>
-          <FlatList
-            data={data}
+          <SectionList
+            sections={groupByPosition(data)}
             keyExtractor={(player) => player.id}
             renderItem={({ item }) => <PlayerRow player={item} />}
+            renderSectionHeader={({ section }) => (
+              <Text style={styles.sectionHeader}>{section.title}</Text>
+            )}
             scrollEnabled={false}
+            stickySectionHeadersEnabled={false}
+            initialNumToRender={100}
           />
         </Card>
       )}
@@ -45,6 +67,15 @@ export default function SquadScreen() {
 }
 
 const styles = StyleSheet.create({
+  sectionHeader: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    backgroundColor: colors.surface,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
