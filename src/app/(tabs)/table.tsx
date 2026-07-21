@@ -8,9 +8,18 @@ import type { Standing } from '@/lib/types';
 import { useData } from '@/lib/use-data';
 import { colors, spacing, typography } from '@/theme/theme';
 
-function StandingRow({ standing }: { standing: Standing }) {
+const PROMOTION_SPOTS = 2;
+const RELEGATION_SPOTS = 2;
+
+function StandingRow({ standing, teamCount }: { standing: Standing; teamCount: number }) {
+  const isPromotion = standing.position <= PROMOTION_SPOTS;
+  const isRelegation = standing.position > teamCount - RELEGATION_SPOTS;
+
   return (
-    <View style={styles.row}>
+    <View
+      testID={`standing-row-${standing.team.id}`}
+      style={[styles.row, isPromotion && styles.promotion, isRelegation && styles.relegation]}
+    >
       <Text style={styles.position}>{standing.position}</Text>
       <Text style={styles.team}>{standing.team.name}</Text>
       <Text style={styles.stat}>{standing.played}</Text>
@@ -43,7 +52,7 @@ export default function TableScreen() {
           <FlatList
             data={data}
             keyExtractor={(standing) => standing.team.id}
-            renderItem={({ item }) => <StandingRow standing={item} />}
+            renderItem={({ item }) => <StandingRow standing={item} teamCount={data.length} />}
             scrollEnabled={false}
           />
         </Card>
@@ -58,6 +67,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: 'transparent',
+  },
+  promotion: {
+    backgroundColor: colors.accentMuted,
+    borderLeftColor: colors.accent,
+  },
+  relegation: {
+    backgroundColor: colors.alertMuted,
+    borderLeftColor: colors.alert,
   },
   header: {
     color: colors.textSecondary,
