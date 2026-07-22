@@ -8,6 +8,9 @@ describe('mockRepository', () => {
     expect(live).toBeDefined();
     expect(live?.homeScore).toEqual(expect.any(Number));
     expect(live?.minute).toEqual(expect.any(Number));
+    expect(
+      fixtures.every((match) => typeof match.venue === 'string' && match.venue.length > 0),
+    ).toBe(true);
   });
 
   it('returns a table ordered by position with points descending', async () => {

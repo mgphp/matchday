@@ -114,6 +114,7 @@ export default function MatchDetailScreen() {
             <Text style={styles.competition}>{data.competition}</Text>
           </View>
           <Text style={styles.score}>{scoreline(data)}</Text>
+          <Text style={styles.venue}>{data.venue}</Text>
         </Card>
 
         <Card>
@@ -154,6 +155,10 @@ const styles = StyleSheet.create({
   score: {
     ...typography.title,
     color: colors.text,
+  },
+  venue: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
   sectionTitle: {
     ...typography.heading,

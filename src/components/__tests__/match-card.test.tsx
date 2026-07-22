@@ -8,6 +8,7 @@ const base: Match = {
   id: 'm1',
   competition: 'Premier League',
   kickoff: '2026-07-21T19:45:00Z',
+  venue: 'Northgate Park',
   status: 'scheduled',
   home: { id: 'a', name: 'Northgate Rovers', shortName: 'NGR' },
   away: { id: 'b', name: 'Harbour City', shortName: 'HBC' },
