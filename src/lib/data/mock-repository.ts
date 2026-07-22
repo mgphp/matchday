@@ -11,11 +11,22 @@ const teams: Record<string, Team> = {
   county: { id: 'county', name: 'Redbrook County', shortName: 'RBC' },
 };
 
+/** Home venue for each team, used as the fixture venue. */
+const venues: Record<string, string> = {
+  rovers: 'Northgate Park',
+  harbour: 'Harbour City Stadium',
+  athletic: "King's Ground",
+  wanderers: 'Westfield Arena',
+  united: 'Milltown Lane',
+  county: 'Redbrook Stadium',
+};
+
 const fixtures: Match[] = [
   {
     id: 'm1',
     competition: 'Premier League',
     kickoff: '2026-07-20T16:30:00Z',
+    venue: venues.rovers,
     status: 'live',
     home: teams.rovers,
     away: teams.harbour,
@@ -27,6 +38,7 @@ const fixtures: Match[] = [
     id: 'm2',
     competition: 'Premier League',
     kickoff: '2026-07-21T19:45:00Z',
+    venue: venues.athletic,
     status: 'scheduled',
     home: teams.athletic,
     away: teams.wanderers,
@@ -35,6 +47,7 @@ const fixtures: Match[] = [
     id: 'm3',
     competition: 'FA Cup',
     kickoff: '2026-07-22T15:00:00Z',
+    venue: venues.united,
     status: 'postponed',
     home: teams.united,
     away: teams.county,
@@ -43,6 +56,7 @@ const fixtures: Match[] = [
     id: 'm4',
     competition: 'Premier League',
     kickoff: '2026-07-18T15:00:00Z',
+    venue: venues.wanderers,
     status: 'finished',
     home: teams.wanderers,
     away: teams.rovers,

@@ -11,6 +11,7 @@ export interface Match {
   competition: string;
   /** ISO 8601 kickoff time */
   kickoff: string;
+  venue: string;
   status: MatchStatus;
   home: Team;
   away: Team;

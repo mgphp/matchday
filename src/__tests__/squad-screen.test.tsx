@@ -1,5 +1,7 @@
 import { render } from '@testing-library/react-native';
 
+import SquadScreen from '@/app/(tabs)/squad';
+
 jest.mock('@/lib/data', () => ({
   repository: {
     getSquad: async () => [
@@ -8,8 +10,6 @@ jest.mock('@/lib/data', () => ({
     ],
   },
 }));
-
-import SquadScreen from '@/app/(tabs)/squad';
 
 describe('SquadScreen', () => {
   it('groups players under position headers and omits empty sections', async () => {
