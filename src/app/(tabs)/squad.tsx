@@ -58,7 +58,7 @@ export default function SquadScreen() {
             )}
             scrollEnabled={false}
             stickySectionHeadersEnabled={false}
-            initialNumToRender={100}
+            disableVirtualization
           />
         </Card>
       )}
