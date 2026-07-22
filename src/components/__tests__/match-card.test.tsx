@@ -14,10 +14,24 @@ const base: Match = {
 };
 
 describe('MatchCard', () => {
-  it('shows kickoff time for a scheduled match', async () => {
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-21T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('shows kickoff time only for a fixture on the current day', async () => {
     const { getByText } = await render(<MatchCard match={base} />);
     expect(getByText('19:45')).toBeTruthy();
     expect(getByText('Northgate Rovers v Harbour City')).toBeTruthy();
+  });
+
+  it('shows kickoff date and time for a fixture on another day', async () => {
+    const future: Match = { ...base, kickoff: '2026-07-23T19:45:00Z' };
+    const { getByText } = await render(<MatchCard match={future} />);
+    expect(getByText('Thu 23 Jul, 19:45')).toBeTruthy();
   });
 
   it('shows the live badge and scoreline for a live match', async () => {

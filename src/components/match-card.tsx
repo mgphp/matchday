@@ -14,6 +14,28 @@ function kickoffLabel(iso: string) {
   });
 }
 
+function isSameUTCDate(a: Date, b: Date) {
+  return (
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
+  );
+}
+
+function kickoffDateLabel(iso: string) {
+  const date = new Date(iso);
+  const weekday = date.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' });
+  const day = date.toLocaleDateString('en-GB', { day: 'numeric', timeZone: 'UTC' });
+  const month = date.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' });
+  return `${weekday} ${day} ${month}`;
+}
+
+/** Kick-off time, prefixed with the date for fixtures not on the current day. */
+function kickoffFullLabel(iso: string) {
+  const time = kickoffLabel(iso);
+  return isSameUTCDate(new Date(iso), new Date()) ? time : `${kickoffDateLabel(iso)}, ${time}`;
+}
+
 function statusBadge(match: Match) {
   switch (match.status) {
     case 'live':
@@ -23,7 +45,7 @@ function statusBadge(match: Match) {
     case 'finished':
       return <Badge label="FT" />;
     case 'scheduled':
-      return <Badge label={kickoffLabel(match.kickoff)} />;
+      return <Badge label={kickoffFullLabel(match.kickoff)} />;
   }
 }
 
@@ -43,7 +65,7 @@ function statusText(match: Match) {
     case 'finished':
       return 'full time';
     case 'scheduled':
-      return `kick-off ${kickoffLabel(match.kickoff)}`;
+      return `kick-off ${kickoffFullLabel(match.kickoff)}`;
   }
 }
 
