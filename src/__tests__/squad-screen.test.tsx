@@ -13,7 +13,7 @@ import SquadScreen from '@/app/(tabs)/squad';
 
 describe('SquadScreen', () => {
   it('groups players under position headers and omits empty sections', async () => {
-    const { findByText, queryByText } = render(<SquadScreen />);
+    const { findByText, queryByText } = await render(<SquadScreen />);
 
     expect(await findByText('Goalkeepers')).toBeTruthy();
     expect(await findByText('Forwards')).toBeTruthy();
