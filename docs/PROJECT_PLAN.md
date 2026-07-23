@@ -75,6 +75,8 @@ matchday
       descriptive labels on match cards and loading states, dynamic type left
       enabled (default font scaling)
 - [x] EAS build profiles (`eas.json`: development / preview / production)
+- [x] Root error boundary (`src/app/_layout.tsx`): themed fallback screen with
+      a retry button when a screen throws during render
 - [ ] Store metadata (needs store accounts)
 
 ## Definition of done (every milestone)
