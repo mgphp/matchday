@@ -6,6 +6,7 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native
 import { Badge } from '@/components/badge';
 import { Card } from '@/components/card';
 import { Screen } from '@/components/screen';
+import { SectionHeader } from '@/components/section-header';
 import { StateView } from '@/components/state-view';
 import { repository } from '@/lib/data';
 import type { MatchDetail, MatchEvent, Player } from '@/lib/types';
@@ -118,7 +119,7 @@ export default function MatchDetailScreen() {
         </Card>
 
         <Card>
-          <Text style={styles.sectionTitle}>Events</Text>
+          <SectionHeader title="Events" variant="accent" />
           {data.events.length === 0 ? (
             <Text style={styles.emptyText}>No events yet.</Text>
           ) : (
@@ -127,7 +128,7 @@ export default function MatchDetailScreen() {
         </Card>
 
         <Card>
-          <Text style={styles.sectionTitle}>Lineups</Text>
+          <SectionHeader title="Lineups" variant="accent" />
           {data.lineups ? (
             <View style={styles.lineupsRow}>
               <LineupColumn title={data.home.shortName} players={data.lineups.home} />
@@ -159,10 +160,6 @@ const styles = StyleSheet.create({
   venue: {
     ...typography.caption,
     color: colors.textSecondary,
-  },
-  sectionTitle: {
-    ...typography.heading,
-    color: colors.accent,
   },
   emptyText: {
     ...typography.body,

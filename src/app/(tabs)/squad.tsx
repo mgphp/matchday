@@ -3,6 +3,7 @@ import { SectionList, StyleSheet, Text, View } from 'react-native';
 import { Badge } from '@/components/badge';
 import { Card } from '@/components/card';
 import { Screen } from '@/components/screen';
+import { SectionHeader } from '@/components/section-header';
 import { StateView } from '@/components/state-view';
 import { repository } from '@/lib/data';
 import type { Player, PlayerPosition } from '@/lib/types';
@@ -53,9 +54,7 @@ export default function SquadScreen() {
             sections={groupByPosition(data)}
             keyExtractor={(player) => player.id}
             renderItem={({ item }) => <PlayerRow player={item} />}
-            renderSectionHeader={({ section }) => (
-              <Text style={styles.sectionHeader}>{section.title}</Text>
-            )}
+            renderSectionHeader={({ section }) => <SectionHeader title={section.title} />}
             scrollEnabled={false}
             stickySectionHeadersEnabled={false}
             disableVirtualization
@@ -67,15 +66,6 @@ export default function SquadScreen() {
 }
 
 const styles = StyleSheet.create({
-  sectionHeader: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    backgroundColor: colors.surface,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

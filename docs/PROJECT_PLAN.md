@@ -47,7 +47,7 @@ matchday
 ### M1 — Navigation shell & core UI ✅ (2026-07-20)
 
 - [x] Tab navigation: Matches, Table, Squad
-- [x] Shared themed components: `Screen`, `Card`, `Button`, `Badge`
+- [x] Shared themed components: `Screen`, `Card`, `Button`, `Badge`, `SectionHeader`
 - [x] Component tests via `@testing-library/react-native`
 
 ### M2 — Data layer ✅ (2026-07-20, mock-backed)
@@ -75,6 +75,8 @@ matchday
       descriptive labels on match cards and loading states, dynamic type left
       enabled (default font scaling)
 - [x] EAS build profiles (`eas.json`: development / preview / production)
+- [x] Shared `SectionHeader` component (default + accent variants), adopted by
+      Squad's position groups and the match centre's Events/Lineups headings
 - [ ] Store metadata (needs store accounts)
 
 ## Definition of done (every milestone)
