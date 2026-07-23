@@ -1,18 +1,21 @@
-import { StyleSheet, Text, type StyleProp, type TextStyle } from 'react-native';
+import { StyleSheet, Text, type TextProps } from 'react-native';
 
 import { colors, spacing, typography } from '@/theme/theme';
 
 type SectionHeaderVariant = 'default' | 'accent';
 
-type SectionHeaderProps = {
+type SectionHeaderProps = Omit<TextProps, 'children'> & {
   title: string;
   variant?: SectionHeaderVariant;
-  style?: StyleProp<TextStyle>;
 };
 
 /** Themed heading for grouping content within a screen (lists, card sections). */
-export function SectionHeader({ title, variant = 'default', style }: SectionHeaderProps) {
-  return <Text style={[styles.base, variants[variant], style]}>{title}</Text>;
+export function SectionHeader({ title, variant = 'default', style, ...props }: SectionHeaderProps) {
+  return (
+    <Text style={[styles.base, variants[variant], style]} {...props}>
+      {title}
+    </Text>
+  );
 }
 
 const styles = StyleSheet.create({
