@@ -77,6 +77,9 @@ matchday
 - [x] EAS build profiles (`eas.json`: development / preview / production)
 - [x] Shared `SectionHeader` component (default + accent variants), adopted by
       Squad's position groups and the match centre's Events/Lineups headings
+- [x] Table tab hidden from the tab bar for now (`href: null` in
+      `(tabs)/_layout.tsx`) — screen and its tests are untouched, just not
+      shown; re-enable by removing that option
 - [ ] Store metadata (needs store accounts)
 
 ## Definition of done (every milestone)

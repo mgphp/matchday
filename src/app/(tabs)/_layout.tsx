@@ -28,7 +28,10 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Matches', tabBarIcon: tabIcon('football') }} />
-      <Tabs.Screen name="table" options={{ title: 'Table', tabBarIcon: tabIcon('podium') }} />
+      <Tabs.Screen
+        name="table"
+        options={{ title: 'Table', tabBarIcon: tabIcon('podium'), href: null }}
+      />
       <Tabs.Screen name="squad" options={{ title: 'Squad', tabBarIcon: tabIcon('people') }} />
     </Tabs>
   );

@@ -46,7 +46,7 @@ matchday
 ├── src
 │   ├── app            # expo-router routes (file-based routing)
 │   │   ├── _layout.tsx  # root stack
-│   │   ├── (tabs)       # tab navigation: Matches / Table / Squad
+│   │   ├── (tabs)       # tab navigation: Matches / Squad (Table screen hidden for now)
 │   │   └── match/[id].tsx # match centre (events, lineups, live polling)
 │   ├── components     # shared themed UI: Screen, Card, Button, Badge, MatchCard, StateView
 │   │   └── __tests__
