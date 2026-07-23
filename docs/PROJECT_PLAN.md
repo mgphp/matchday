@@ -77,6 +77,8 @@ matchday
 - [x] EAS build profiles (`eas.json`: development / preview / production)
 - [x] Shared `SectionHeader` component (default + accent variants), adopted by
       Squad's position groups and the match centre's Events/Lineups headings
+- [x] Matches screen split into "Upcoming" (scheduled/live/postponed) and
+      "Previous" (finished) sections via `SectionHeader`
 - [ ] Store metadata (needs store accounts)
 
 ## Definition of done (every milestone)

@@ -1,12 +1,25 @@
 import { useRouter } from 'expo-router';
-import { FlatList, RefreshControl } from 'react-native';
+import { RefreshControl, SectionList } from 'react-native';
 
 import { MatchCard } from '@/components/match-card';
 import { Screen } from '@/components/screen';
+import { SectionHeader } from '@/components/section-header';
 import { StateView } from '@/components/state-view';
 import { repository } from '@/lib/data';
+import type { Match } from '@/lib/types';
 import { useData } from '@/lib/use-data';
 import { colors, spacing } from '@/theme/theme';
+
+function isUpcoming(match: Match) {
+  return match.status !== 'finished';
+}
+
+function groupByStatus(matches: Match[]) {
+  return [
+    { title: 'Upcoming', data: matches.filter(isUpcoming) },
+    { title: 'Previous', data: matches.filter((match) => !isUpcoming(match)) },
+  ].filter((section) => section.data.length > 0);
+}
 
 export default function MatchesScreen() {
   const router = useRouter();
@@ -21,12 +34,14 @@ export default function MatchesScreen() {
       ) : data.length === 0 ? (
         <StateView state="empty" message="No fixtures scheduled." />
       ) : (
-        <FlatList
-          data={data}
+        <SectionList
+          sections={groupByStatus(data)}
           keyExtractor={(match) => match.id}
           renderItem={({ item }) => (
             <MatchCard match={item} onPress={() => router.push(`/match/${item.id}`)} />
           )}
+          renderSectionHeader={({ section }) => <SectionHeader title={section.title} />}
+          stickySectionHeadersEnabled={false}
           contentContainerStyle={{ gap: spacing.md }}
           refreshControl={
             <RefreshControl
