@@ -198,4 +198,9 @@ export const mockRepository: MatchdayRepository = {
   },
   getTable: () => respond(table),
   getSquad: () => respond(squad),
+  addPlayer: (player) => {
+    const newPlayer: Player = { ...player, id: `p${squad.length + 1}` };
+    squad.push(newPlayer);
+    return respond(newPlayer);
+  },
 };
