@@ -7,6 +7,14 @@ jest.mock('expo-router', () => ({
 }));
 
 describe('MatchesScreen', () => {
+  it('shows three skeleton cards while fixtures are loading', async () => {
+    const { getAllByLabelText, findByText } = await render(<MatchesScreen />);
+
+    expect(getAllByLabelText('Loading fixture')).toHaveLength(3);
+
+    await findByText('Upcoming');
+  });
+
   it('renders fixtures from the repository after loading', async () => {
     const { findByText } = await render(<MatchesScreen />);
     expect(await findByText('Northgate Rovers 1 – 0 Harbour City')).toBeTruthy();
