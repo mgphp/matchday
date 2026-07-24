@@ -46,14 +46,15 @@ matchday
 ├── src
 │   ├── app            # expo-router routes (file-based routing)
 │   │   ├── _layout.tsx  # root stack
-│   │   ├── (tabs)       # tab navigation: Matches / Squad (Table screen hidden for now)
+│   │   ├── (tabs)       # tab navigation: Matches / Squad / Settings (Table screen hidden for now)
 │   │   └── match/[id].tsx # match centre (events, lineups, live polling)
 │   ├── components     # shared themed UI: Screen, Card, Button, Badge, MatchCard, SkeletonCard, StateView
 │   │   └── __tests__
 │   ├── lib
 │   │   ├── data       # repository interface + mock data source
 │   │   ├── types.ts   # domain models (Match, Standing, Player)
-│   │   └── use-data.ts # async data hook (loading/error/success)
+│   │   ├── use-data.ts # async data hook (loading/error/success)
+│   │   └── favourite-team.ts # favourite team, persisted via AsyncStorage
 │   └── theme
 │       ├── theme.ts   # design tokens (colors, spacing, radii, typography)
 │       └── __tests__

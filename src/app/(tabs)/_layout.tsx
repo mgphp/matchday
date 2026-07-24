@@ -33,6 +33,10 @@ export default function TabsLayout() {
         options={{ title: 'Table', tabBarIcon: tabIcon('podium'), href: null }}
       />
       <Tabs.Screen name="squad" options={{ title: 'Squad', tabBarIcon: tabIcon('people') }} />
+      <Tabs.Screen
+        name="settings"
+        options={{ title: 'Settings', tabBarIcon: tabIcon('settings') }}
+      />
     </Tabs>
   );
 }
