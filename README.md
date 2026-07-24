@@ -62,18 +62,19 @@ matchday
 ├── src
 │   ├── app            # expo-router routes (file-based routing)
 │   │   ├── _layout.tsx  # root stack — wraps everything in AuthProvider + AuthGate
-│   │   ├── (tabs)       # tab navigation: Matches / Squad (Table screen hidden for now)
+│   │   ├── (tabs)       # tab navigation: Matches / Squad / Settings (Table screen hidden for now)
 │   │   └── match/[id].tsx # match centre (events, lineups, live polling)
 │   ├── components
 │   │   ├── auth       # AuthGate + login/register/onboarding screens (coach auth flow)
-│   │   ├── Screen, Card, Button, Badge, MatchCard, TextField, StateView
+│   │   ├── Screen, Card, Button, Badge, MatchCard, SkeletonCard, TextField, StateView
 │   │   └── __tests__
 │   ├── lib
 │   │   ├── auth       # Cognito wrapper (cognito.ts) + AuthProvider/useAuth (auth-context.tsx)
 │   │   ├── data       # repository interface, mock + HttpRepository, swap point (index.ts)
 │   │   ├── coach-api.ts # club/coach/team management endpoints (registration, onboarding)
 │   │   ├── types.ts   # domain models (Match, Standing, Player)
-│   │   └── use-data.ts # async data hook (loading/error/success)
+│   │   ├── use-data.ts # async data hook (loading/error/success)
+│   │   └── favourite-team.ts # favourite team, persisted via AsyncStorage
 │   └── theme
 │       ├── theme.ts   # design tokens (colors, spacing, radii, typography)
 │       └── __tests__

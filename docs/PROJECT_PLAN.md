@@ -79,6 +79,10 @@ matchday
       Squad's position groups and the match centre's Events/Lineups headings
 - [x] Matches screen split into "Upcoming" (scheduled/live/postponed) and
       "Previous" (finished) sections via `SectionHeader`
+- [x] Skeleton loading state: Matches screen shows 3 pulsing `SkeletonCard`
+      placeholders instead of a spinner while fixtures load
+- [x] Settings tab with a favourite-team picker, persisted via
+      `@react-native-async-storage/async-storage` (`src/lib/favourite-team.ts`)
 - [ ] Store metadata (needs store accounts)
 
 ### M5 — Coach auth & real backend (matchday-api M5c, 2026-07-24)

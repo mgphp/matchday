@@ -1,14 +1,17 @@
 import { useRouter } from 'expo-router';
-import { RefreshControl, SectionList } from 'react-native';
+import { RefreshControl, SectionList, View } from 'react-native';
 
 import { MatchCard } from '@/components/match-card';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
+import { SkeletonCard } from '@/components/skeleton-card';
 import { StateView } from '@/components/state-view';
 import { repository } from '@/lib/data';
 import type { Match } from '@/lib/types';
 import { useData } from '@/lib/use-data';
 import { colors, spacing } from '@/theme/theme';
+
+const SKELETON_COUNT = 3;
 
 function isUpcoming(match: Match) {
   return match.status !== 'finished';
@@ -28,7 +31,11 @@ export default function MatchesScreen() {
   return (
     <Screen>
       {status === 'loading' ? (
-        <StateView state="loading" />
+        <View style={{ gap: spacing.md }}>
+          {Array.from({ length: SKELETON_COUNT }, (_, index) => (
+            <SkeletonCard key={index} />
+          ))}
+        </View>
       ) : status === 'error' ? (
         <StateView state="error" message="Could not load fixtures." onRetry={reload} />
       ) : data.length === 0 ? (
