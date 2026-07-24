@@ -48,7 +48,7 @@ matchday
 │   │   ├── _layout.tsx  # root stack
 │   │   ├── (tabs)       # tab navigation: Matches / Squad / Settings (Table screen hidden for now)
 │   │   └── match/[id].tsx # match centre (events, lineups, live polling)
-│   ├── components     # shared themed UI: Screen, Card, Button, Badge, MatchCard, StateView
+│   ├── components     # shared themed UI: Screen, Card, Button, Badge, MatchCard, SkeletonCard, StateView
 │   │   └── __tests__
 │   ├── lib
 │   │   ├── data       # repository interface + mock data source
