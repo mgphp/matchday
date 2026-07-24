@@ -11,11 +11,27 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
 
 ```bash
 npm install
+cp .env.example .env   # fill in with matchday-api's deploy output (see below)
 npm start        # start the Expo dev server
 npm run ios      # open in iOS simulator
 npm run android  # open in Android emulator
 npm run web      # open in the browser
 ```
+
+### Backend & auth
+
+The app talks to [`matchday-api`](https://github.com/mgphp/matchday-api) (Lambda + DynamoDB +
+Cognito). `.env` needs three values from that repo's `npm run deploy` output:
+
+```
+EXPO_PUBLIC_API_URL=https://<function-url>.lambda-url.<region>.on.aws/
+EXPO_PUBLIC_COGNITO_USER_POOL_ID=<region>_xxxxxxxxx
+EXPO_PUBLIC_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+Coaches sign in (or register) on first launch — see `src/components/auth/`. Cognito auth pulls
+in a native crypto polyfill (`react-native-get-random-values`), so **Expo Go can't run this app**;
+use a dev client build (`npx eas build --profile development`, per the Builds section below).
 
 ## Scripts
 
@@ -45,13 +61,17 @@ npm test           # tests
 matchday
 ├── src
 │   ├── app            # expo-router routes (file-based routing)
-│   │   ├── _layout.tsx  # root stack
+│   │   ├── _layout.tsx  # root stack — wraps everything in AuthProvider + AuthGate
 │   │   ├── (tabs)       # tab navigation: Matches / Squad (Table screen hidden for now)
 │   │   └── match/[id].tsx # match centre (events, lineups, live polling)
-│   ├── components     # shared themed UI: Screen, Card, Button, Badge, MatchCard, StateView
+│   ├── components
+│   │   ├── auth       # AuthGate + login/register/onboarding screens (coach auth flow)
+│   │   ├── Screen, Card, Button, Badge, MatchCard, TextField, StateView
 │   │   └── __tests__
 │   ├── lib
-│   │   ├── data       # repository interface + mock data source
+│   │   ├── auth       # Cognito wrapper (cognito.ts) + AuthProvider/useAuth (auth-context.tsx)
+│   │   ├── data       # repository interface, mock + HttpRepository, swap point (index.ts)
+│   │   ├── coach-api.ts # club/coach/team management endpoints (registration, onboarding)
 │   │   ├── types.ts   # domain models (Match, Standing, Player)
 │   │   └── use-data.ts # async data hook (loading/error/success)
 │   └── theme
@@ -60,6 +80,7 @@ matchday
 ├── assets             # icons, splash images
 ├── app.json           # Expo config
 ├── eslint.config.js   # ESLint flat config (expo + prettier)
+├── .env.example        # EXPO_PUBLIC_* vars for matchday-api + Cognito
 ├── .prettierrc.json
 ├── tsconfig.json
 └── package.json

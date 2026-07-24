@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 import type { ComponentProps } from 'react';
 import type { ColorValue } from 'react-native';
 
+import { SignOutButton } from '@/components/auth/sign-out-button';
 import { colors } from '@/theme/theme';
 
 function tabIcon(name: ComponentProps<typeof Ionicons>['name']) {
@@ -25,6 +26,7 @@ export default function TabsLayout() {
         },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textSecondary,
+        headerRight: () => <SignOutButton />,
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Matches', tabBarIcon: tabIcon('football') }} />
