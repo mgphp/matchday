@@ -1,25 +1,31 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
+import { AuthGate } from '@/components/auth/auth-gate';
 import { Screen } from '@/components/screen';
 import { StateView } from '@/components/state-view';
+import { AuthProvider } from '@/lib/auth/auth-context';
 import { colors } from '@/theme/theme';
 
 export default function RootLayout() {
   return (
     <>
       <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: colors.background },
-          headerTintColor: colors.text,
-          headerShadowVisible: false,
-          contentStyle: { backgroundColor: colors.background },
-        }}
-      >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="match/[id]" options={{ title: 'Match centre' }} />
-      </Stack>
+      <AuthProvider>
+        <AuthGate>
+          <Stack
+            screenOptions={{
+              headerStyle: { backgroundColor: colors.background },
+              headerTintColor: colors.text,
+              headerShadowVisible: false,
+              contentStyle: { backgroundColor: colors.background },
+            }}
+          >
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="match/[id]" options={{ title: 'Match centre' }} />
+          </Stack>
+        </AuthGate>
+      </AuthProvider>
     </>
   );
 }

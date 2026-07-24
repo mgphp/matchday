@@ -57,7 +57,7 @@ matchday
 - [x] Data fetching via `useData` hook (loading/error/success + reload)
 - [x] Loading/error/empty states using theme tokens (`StateView`)
 - [x] Matches, Table and Squad screens driven by repository data
-- [ ] Real data source integration (decision pending)
+- [x] Real data source integration — see M5 below
 
 ### M3 — Match experience ✅ (2026-07-20, mock-backed)
 
@@ -84,6 +84,34 @@ matchday
 - [x] Settings tab with a favourite-team picker, persisted via
       `@react-native-async-storage/async-storage` (`src/lib/favourite-team.ts`)
 - [ ] Store metadata (needs store accounts)
+
+### M5 — Coach auth & real backend (matchday-api M5c, 2026-07-24)
+
+Wires the app to the deployed [`matchday-api`](https://github.com/mgphp/matchday-api)
+(M6: club/coach/team model, Cognito auth) instead of the mock repository.
+
+- [x] `HttpRepository` (`src/lib/data/http-repository.ts`) implementing
+      `MatchdayRepository`, parameterized by `teamId` — defaults the `venue`
+      field to `''` since matchday-api's `Match` type doesn't carry one yet
+      (tracked as a gap, not fixed here)
+- [x] Coach auth: sign in, self-registration (email/password + club/team
+      setup in one form), email confirmation, and the Cognito
+      `NEW_PASSWORD_REQUIRED` challenge (for coaches created via
+      matchday-api's migration script) — `src/lib/auth/`,
+      `src/components/auth/`
+- [x] Session persisted via `@react-native-async-storage/async-storage`,
+      with transparent access-token refresh (`useAuth().getAccessToken`)
+- [x] `AuthGate` (`src/app/_layout.tsx`) gates the tab navigator behind
+      sign-in + onboarding (club/team creation or picking one of up to 3
+      teams), then flips the data-source swap point
+      (`src/lib/data/index.ts`'s `setRepository`)
+- [x] `.env.example` documents `EXPO_PUBLIC_API_URL`,
+      `EXPO_PUBLIC_COGNITO_USER_POOL_ID`, `EXPO_PUBLIC_COGNITO_CLIENT_ID`
+- [x] Mock repository kept as the default/test data source; screens are
+      unaffected and their tests still mock `@/lib/data` directly
+- **Note:** Cognito auth requires `react-native-get-random-values` (native
+  crypto polyfill), so the app now needs a dev client build — Expo Go no
+  longer works. See README's Backend & auth section.
 
 ## Definition of done (every milestone)
 
