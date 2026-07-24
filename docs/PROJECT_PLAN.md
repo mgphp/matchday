@@ -79,6 +79,8 @@ matchday
       Squad's position groups and the match centre's Events/Lineups headings
 - [x] Matches screen split into "Upcoming" (scheduled/live/postponed) and
       "Previous" (finished) sections via `SectionHeader`
+- [x] Settings tab with a favourite-team picker, persisted via
+      `@react-native-async-storage/async-storage` (`src/lib/favourite-team.ts`)
 - [ ] Store metadata (needs store accounts)
 
 ## Definition of done (every milestone)
