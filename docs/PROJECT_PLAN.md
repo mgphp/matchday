@@ -83,6 +83,8 @@ matchday
       placeholders instead of a spinner while fixtures load
 - [x] Settings tab with a favourite-team picker, persisted via
       `@react-native-async-storage/async-storage` (`src/lib/favourite-team.ts`)
+- [x] Matches screen pins the favourite team's fixtures to the top of the
+      Upcoming/Previous sections (stable sort, `src/app/(tabs)/index.tsx`)
 - [ ] Store metadata (needs store accounts)
 
 ### M5 — Coach auth & real backend (matchday-api M5c, 2026-07-24)
