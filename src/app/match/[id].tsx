@@ -73,6 +73,26 @@ function scoreline(match: MatchDetail) {
   return `${match.home.name} ${match.homeScore} – ${match.awayScore} ${match.away.name}`;
 }
 
+/** e.g. "Callum Reed 12′, 79′\nJamie Cole 27′" — one line per scorer, minutes ascending. */
+function scorersFor(events: MatchEvent[], side: MatchEvent['side']) {
+  const minutesByPlayer = new Map<string, number[]>();
+  for (const event of events) {
+    if (event.type !== 'goal' || event.side !== side) continue;
+    const minutes = minutesByPlayer.get(event.player) ?? [];
+    minutes.push(event.minute);
+    minutesByPlayer.set(event.player, minutes);
+  }
+  return [...minutesByPlayer.entries()]
+    .map(
+      ([player, minutes]) =>
+        `${player} ${minutes
+          .sort((a, b) => a - b)
+          .map((minute) => `${minute}′`)
+          .join(', ')}`,
+    )
+    .join('\n');
+}
+
 export default function MatchDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const getMatch = useCallback(() => repository.getMatch(String(id)), [id]);
@@ -101,6 +121,9 @@ export default function MatchDetailScreen() {
     );
   }
 
+  const homeScorers = scorersFor(data.events, 'home');
+  const awayScorers = scorersFor(data.events, 'away');
+
   return (
     <Screen>
       <ScrollView
@@ -115,6 +138,12 @@ export default function MatchDetailScreen() {
             <Text style={styles.competition}>{data.competition}</Text>
           </View>
           <Text style={styles.score}>{scoreline(data)}</Text>
+          {homeScorers || awayScorers ? (
+            <View style={styles.scorersRow}>
+              <Text style={styles.scorersText}>{homeScorers}</Text>
+              <Text style={[styles.scorersText, styles.scorersAway]}>{awayScorers}</Text>
+            </View>
+          ) : null}
           <Text style={styles.venue}>{data.venue}</Text>
         </Card>
 
@@ -156,6 +185,18 @@ const styles = StyleSheet.create({
   score: {
     ...typography.title,
     color: colors.text,
+  },
+  scorersRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  scorersText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  scorersAway: {
+    textAlign: 'right',
   },
   venue: {
     ...typography.caption,
