@@ -83,6 +83,9 @@ matchday
       placeholders instead of a spinner while fixtures load
 - [x] Settings tab with a favourite-team picker, persisted via
       `@react-native-async-storage/async-storage` (`src/lib/favourite-team.ts`)
+- [x] Descriptive `accessibilityLabel`s on Table and Squad rows (position,
+      team/player, stats, promotion/relegation zone); audited touch targets
+      to a 44pt minimum (`Button`, `SignOutButton`)
 - [ ] Store metadata (needs store accounts)
 
 ### M5 — Coach auth & real backend (matchday-api M5c, 2026-07-24)

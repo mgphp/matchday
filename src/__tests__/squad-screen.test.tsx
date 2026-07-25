@@ -23,4 +23,11 @@ describe('SquadScreen', () => {
     expect(await findByText('Test Keeper')).toBeTruthy();
     expect(await findByText('Test Striker')).toBeTruthy();
   });
+
+  it('gives each player row a descriptive accessibility label', async () => {
+    const { findByLabelText } = await render(<SquadScreen />);
+
+    expect(await findByLabelText('Number 1, Test Keeper, Goalkeeper')).toBeTruthy();
+    expect(await findByLabelText('Number 9, Test Striker, Forward')).toBeTruthy();
+  });
 });
