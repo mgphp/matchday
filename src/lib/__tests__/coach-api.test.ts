@@ -63,4 +63,29 @@ describe('createCoachApi', () => {
     const coachApi = createCoachApi(options);
     expect(await coachApi.listMyTeams()).toEqual([]);
   });
+
+  it('registers a coach and returns it', async () => {
+    const coach = { id: 'coach-1', name: 'Mark', clubId: 'club-1' };
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(coach, 201));
+
+    const coachApi = createCoachApi(options);
+    expect(await coachApi.registerCoach('Mark', 'club-1')).toEqual(coach);
+  });
+
+  it('throws when registering a coach fails', async () => {
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ error: 'duplicate' }, 400));
+
+    const coachApi = createCoachApi(options);
+    await expect(coachApi.registerCoach('Mark', 'club-1')).rejects.toThrow(
+      'Could not register coach.',
+    );
+  });
+
+  it('creates a team and returns it', async () => {
+    const team = { id: 'team-1', name: 'Under 10 Bears', shortName: 'U10', clubId: 'club-1' };
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(team, 201));
+
+    const coachApi = createCoachApi(options);
+    expect(await coachApi.createTeam('Under 10 Bears', 'U10')).toEqual(team);
+  });
 });

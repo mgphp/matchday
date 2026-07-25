@@ -28,5 +28,5 @@ jobs:
       - name: Format check
         run: npx prettier --check .
 
-      - name: Test
-        run: npm test -- --ci
+      - name: Test with coverage
+        run: npm run test:coverage -- --ci

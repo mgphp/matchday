@@ -83,6 +83,11 @@ matchday
       placeholders instead of a spinner while fixtures load
 - [x] Settings tab with a favourite-team picker, persisted via
       `@react-native-async-storage/async-storage` (`src/lib/favourite-team.ts`)
+- [x] `npm run test:coverage` + coverage thresholds (~80% statements/
+      functions/lines, 75% branches) for `src/lib` and `src/components`,
+      run in CI. Excludes `src/lib/auth/` and `src/components/auth/` — the
+      Cognito wrapper is thin SDK integration code, not core app logic;
+      raising its coverage is future work, not blocked by this threshold
 - [ ] Store metadata (needs store accounts)
 
 ### M5 — Coach auth & real backend (matchday-api M5c, 2026-07-24)
