@@ -66,6 +66,9 @@ matchday
       postponed alert badge
 - [x] Pull-to-refresh (Matches list + match detail) and 30s background polling
       while a match is live
+- [x] Goal scorers summarised under the scoreline in the match centre header
+      card, aggregated per side (repeat scorers grouped with all their
+      minutes, e.g. "Callum Reed 12′, 79′")
 
 ### M4 — Polish & release (in progress)
 
