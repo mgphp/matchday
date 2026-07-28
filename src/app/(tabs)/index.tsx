@@ -1,6 +1,9 @@
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { RefreshControl, SectionList, View } from 'react-native';
 
+import { AddFixtureModal } from '@/components/add-fixture-modal';
+import { Button } from '@/components/button';
 import { MatchCard } from '@/components/match-card';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
@@ -8,6 +11,7 @@ import { SkeletonCard } from '@/components/skeleton-card';
 import { StateView } from '@/components/state-view';
 import { repository } from '@/lib/data';
 import { useFavouriteTeam } from '@/lib/favourite-team';
+import { useTeam } from '@/lib/team-context';
 import type { Match } from '@/lib/types';
 import { useData } from '@/lib/use-data';
 import { colors, spacing } from '@/theme/theme';
@@ -47,9 +51,12 @@ export default function MatchesScreen() {
   const router = useRouter();
   const { status, data, reload, refresh, isRefreshing } = useData(repository.getFixtures);
   const { teamId } = useFavouriteTeam();
+  const ownTeam = useTeam();
+  const [isAddingFixture, setIsAddingFixture] = useState(false);
 
   return (
     <Screen>
+      <Button label="Add fixture" onPress={() => setIsAddingFixture(true)} />
       {status === 'loading' ? (
         <View style={{ gap: spacing.md }}>
           {Array.from({ length: SKELETON_COUNT }, (_, index) => (
@@ -79,6 +86,15 @@ export default function MatchesScreen() {
           }
         />
       )}
+      <AddFixtureModal
+        visible={isAddingFixture}
+        onClose={() => setIsAddingFixture(false)}
+        ownTeam={ownTeam}
+        onSubmit={async (input) => {
+          await repository.createMatch(input);
+          await reload();
+        }}
+      />
     </Screen>
   );
 }

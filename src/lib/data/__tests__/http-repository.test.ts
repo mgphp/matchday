@@ -1,3 +1,5 @@
+import type { Player } from '@/lib/types';
+
 import { createHttpRepository } from '../http-repository';
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
@@ -67,6 +69,99 @@ describe('createHttpRepository', () => {
       method: 'PUT',
       headers: { authorization: 'Bearer test-token', 'content-type': 'application/json' },
       body: JSON.stringify([...existing, added]),
+    });
+  });
+
+  it('updatePlayer reads the squad, replaces the matching player and PUTs the full array', async () => {
+    const existing: Player[] = [
+      { id: 'p1', name: 'Sam Okafor', position: 'GK', squadNumber: 1 },
+      { id: 'p2', name: 'Danny Whitmore', position: 'DF', squadNumber: 2 },
+    ];
+    const updated: Player = { id: 'p2', name: 'Danny W.', position: 'DF', squadNumber: 2 };
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse(existing))
+      .mockResolvedValueOnce(jsonResponse([]));
+
+    const repo = createHttpRepository(options);
+    const result = await repo.updatePlayer(updated);
+
+    expect(result).toEqual(updated);
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://api.example.com/teams/team-1/squad', {
+      method: 'PUT',
+      headers: { authorization: 'Bearer test-token', 'content-type': 'application/json' },
+      body: JSON.stringify([existing[0], updated]),
+    });
+  });
+
+  it('removePlayer reads the squad, drops the matching player and PUTs the rest', async () => {
+    const existing: Player[] = [
+      { id: 'p1', name: 'Sam Okafor', position: 'GK', squadNumber: 1 },
+      { id: 'p2', name: 'Danny Whitmore', position: 'DF', squadNumber: 2 },
+    ];
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse(existing))
+      .mockResolvedValueOnce(jsonResponse([]));
+
+    const repo = createHttpRepository(options);
+    await repo.removePlayer('p1');
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://api.example.com/teams/team-1/squad', {
+      method: 'PUT',
+      headers: { authorization: 'Bearer test-token', 'content-type': 'application/json' },
+      body: JSON.stringify([existing[1]]),
+    });
+  });
+
+  it('createMatch POSTs the fixture as scheduled and defaults the returned venue', async () => {
+    const input = {
+      competition: 'League Cup',
+      kickoff: '2026-09-05T10:00:00Z',
+      venue: 'Bear Pit',
+      home: { id: 'team-1', name: 'Under 10 Bears', shortName: 'U10' },
+      away: { id: 'opp-1', name: 'Rivals FC', shortName: 'RIV' },
+    };
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(jsonResponse({ id: 'm9', ...input, status: 'scheduled', events: [] }));
+
+    const repo = createHttpRepository(options);
+    const match = await repo.createMatch(input);
+
+    expect(match.id).toBe('m9');
+    expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/teams/team-1/matches', {
+      method: 'POST',
+      headers: { authorization: 'Bearer test-token', 'content-type': 'application/json' },
+      body: JSON.stringify({ ...input, status: 'scheduled' }),
+    });
+  });
+
+  it('updateMatchScore PATCHes only the score/status/minute fields', async () => {
+    const update = { status: 'live' as const, homeScore: 1, awayScore: 0, minute: 12 };
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      jsonResponse({
+        id: 'm2',
+        competition: 'Premier League',
+        kickoff: '2026-09-05T10:00:00Z',
+        status: 'live',
+        home: { id: 'team-1', name: 'Under 10 Bears', shortName: 'U10' },
+        away: { id: 'opp-1', name: 'Rivals FC', shortName: 'RIV' },
+        homeScore: 1,
+        awayScore: 0,
+        minute: 12,
+        events: [],
+      }),
+    );
+
+    const repo = createHttpRepository(options);
+    const match = await repo.updateMatchScore('m2', update);
+
+    expect(match.status).toBe('live');
+    expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/teams/team-1/matches/m2', {
+      method: 'PATCH',
+      headers: { authorization: 'Bearer test-token', 'content-type': 'application/json' },
+      body: JSON.stringify(update),
     });
   });
 });

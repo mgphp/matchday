@@ -1,6 +1,6 @@
 import type { Match, MatchDetail, Player, Standing } from '@/lib/types';
 
-import type { MatchdayRepository } from './repository';
+import type { MatchdayRepository, MatchScoreUpdate, NewFixtureInput } from './repository';
 
 interface HttpRepositoryOptions {
   baseUrl: string;
@@ -61,6 +61,36 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
         body: [...squad, newPlayer],
       });
       return newPlayer;
+    },
+    updatePlayer: async (player) => {
+      const squad = await request<Player[]>(options, `teams/${teamId}/squad`);
+      const updated = squad.map((existing) => (existing.id === player.id ? player : existing));
+      await request<Player[]>(options, `teams/${teamId}/squad`, { method: 'PUT', body: updated });
+      return player;
+    },
+    removePlayer: async (id) => {
+      const squad = await request<Player[]>(options, `teams/${teamId}/squad`);
+      await request<Player[]>(options, `teams/${teamId}/squad`, {
+        method: 'PUT',
+        body: squad.filter((player) => player.id !== id),
+      });
+    },
+    createMatch: async (input: NewFixtureInput) => {
+      const match = await request<MatchDetail>(options, `teams/${teamId}/matches`, {
+        method: 'POST',
+        // matchday-api ignores unknown fields on write and returns them
+        // unchanged on read, so `venue` round-trips fine despite not being
+        // part of its declared Match type yet.
+        body: { ...input, status: 'scheduled' },
+      });
+      return withVenue(match);
+    },
+    updateMatchScore: async (id, update: MatchScoreUpdate) => {
+      const match = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`, {
+        method: 'PATCH',
+        body: update,
+      });
+      return withVenue(match);
     },
   };
 }

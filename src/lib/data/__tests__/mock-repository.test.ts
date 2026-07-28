@@ -57,4 +57,61 @@ describe('mockRepository', () => {
     expect(after.length).toBe(beforeCount + 1);
     expect(after).toContainEqual(added);
   });
+
+  it('createMatch appends a scheduled fixture with no events', async () => {
+    // getFixtures() returns the live array reference, not a copy — capture
+    // the count now, before createMatch mutates that same array in place.
+    const beforeCount = (await mockRepository.getFixtures()).length;
+    const created = await mockRepository.createMatch({
+      competition: 'League Cup',
+      kickoff: '2026-09-05T10:00:00Z',
+      venue: 'Bear Pit',
+      home: { id: 'rovers', name: 'Northgate Rovers', shortName: 'NGR' },
+      away: { id: 'opp-1', name: 'Rivals FC', shortName: 'RIV' },
+    });
+
+    expect(created.status).toBe('scheduled');
+    expect(created.events).toEqual([]);
+    expect(await mockRepository.getFixtures()).toHaveLength(beforeCount + 1);
+  });
+
+  it('updateMatchScore patches an existing match and rejects an unknown id', async () => {
+    const updated = await mockRepository.updateMatchScore('m2', {
+      status: 'live',
+      homeScore: 1,
+      awayScore: 0,
+      minute: 5,
+    });
+
+    expect(updated).toMatchObject({ id: 'm2', status: 'live', homeScore: 1, minute: 5 });
+    // Untouched fields survive the partial update.
+    expect(updated.competition).toBe('Premier League');
+
+    await expect(mockRepository.updateMatchScore('nope', { status: 'live' })).rejects.toThrow(
+      'No match with id nope',
+    );
+  });
+
+  it('updatePlayer replaces the matching player in place', async () => {
+    const updated = await mockRepository.updatePlayer({
+      id: 'p2',
+      name: 'Danny W.',
+      position: 'DF',
+      squadNumber: 20,
+    });
+
+    expect(updated.name).toBe('Danny W.');
+    const squad = await mockRepository.getSquad();
+    expect(squad.find((player) => player.id === 'p2')).toEqual(updated);
+  });
+
+  it('removePlayer drops the player from the squad', async () => {
+    // Same live-reference gotcha as above: snapshot the count first.
+    const beforeCount = (await mockRepository.getSquad()).length;
+    await mockRepository.removePlayer('p2');
+    const after = await mockRepository.getSquad();
+
+    expect(after).toHaveLength(beforeCount - 1);
+    expect(after.find((player) => player.id === 'p2')).toBeUndefined();
+  });
 });

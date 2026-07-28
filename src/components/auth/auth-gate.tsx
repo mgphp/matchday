@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth/auth-context';
 import { createCoachApi, type ManagedTeam } from '@/lib/coach-api';
 import { setRepository } from '@/lib/data';
 import { createHttpRepository } from '@/lib/data/http-repository';
+import { TeamProvider } from '@/lib/team-context';
 
 import { ConfirmScreen } from './confirm-screen';
 import { LoginScreen } from './login-screen';
@@ -21,7 +22,7 @@ type SetupState =
   | { step: 'needsCoachProfile' }
   | { step: 'needsTeam' }
   | { step: 'pickTeam'; teams: ManagedTeam[] }
-  | { step: 'ready' }
+  | { step: 'ready'; team: ManagedTeam }
   | { step: 'error'; message: string };
 
 /**
@@ -55,7 +56,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
             setRepository(
               createHttpRepository({ baseUrl: API_URL, teamId: team.id, getAccessToken }),
             );
-            setSetup({ step: 'ready' });
+            setSetup({ step: 'ready', team });
           }
           return;
         }
@@ -67,10 +68,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
         if (teams.length === 0) {
           if (!cancelled) setSetup({ step: 'needsTeam' });
         } else if (teams.length === 1) {
+          const [team] = teams;
           setRepository(
-            createHttpRepository({ baseUrl: API_URL, teamId: teams[0].id, getAccessToken }),
+            createHttpRepository({ baseUrl: API_URL, teamId: team.id, getAccessToken }),
           );
-          if (!cancelled) setSetup({ step: 'ready' });
+          if (!cancelled) setSetup({ step: 'ready', team });
         } else if (!cancelled) {
           setSetup({ step: 'pickTeam', teams });
         }
@@ -158,7 +160,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       }
       const team = await coachApi.createTeam(details.teamName, details.teamShortName);
       setRepository(createHttpRepository({ baseUrl: API_URL, teamId: team.id, getAccessToken }));
-      setSetup({ step: 'ready' });
+      setSetup({ step: 'ready', team });
     };
     return (
       <OnboardingScreen needsCoachProfile={needsCoachProfile} onSubmit={handleOnboardingSubmit} />
@@ -170,12 +172,14 @@ export function AuthGate({ children }: { children: ReactNode }) {
       <TeamPickerScreen
         teams={setup.teams}
         onSelect={(teamId) => {
+          const team = setup.teams.find((candidate) => candidate.id === teamId);
+          if (!team) return;
           setRepository(createHttpRepository({ baseUrl: API_URL, teamId, getAccessToken }));
-          setSetup({ step: 'ready' });
+          setSetup({ step: 'ready', team });
         }}
       />
     );
   }
 
-  return <>{children}</>;
+  return <TeamProvider team={setup.team}>{children}</TeamProvider>;
 }

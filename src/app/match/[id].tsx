@@ -1,10 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Badge } from '@/components/badge';
+import { Button } from '@/components/button';
 import { Card } from '@/components/card';
+import { EditMatchModal } from '@/components/edit-match-modal';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { StateView } from '@/components/state-view';
@@ -97,6 +99,7 @@ export default function MatchDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const getMatch = useCallback(() => repository.getMatch(String(id)), [id]);
   const { status, data, reload, refresh, isRefreshing } = useData(getMatch);
+  const [isEditing, setIsEditing] = useState(false);
 
   const isLive = data?.status === 'live';
   useEffect(() => {
@@ -145,6 +148,7 @@ export default function MatchDetailScreen() {
             </View>
           ) : null}
           <Text style={styles.venue}>{data.venue}</Text>
+          <Button label="Edit match" variant="secondary" onPress={() => setIsEditing(true)} />
         </Card>
 
         <Card>
@@ -168,6 +172,15 @@ export default function MatchDetailScreen() {
           )}
         </Card>
       </ScrollView>
+      <EditMatchModal
+        visible={isEditing}
+        onClose={() => setIsEditing(false)}
+        match={data}
+        onSubmit={async (update) => {
+          await repository.updateMatchScore(data.id, update);
+          await refresh();
+        }}
+      />
     </Screen>
   );
 }

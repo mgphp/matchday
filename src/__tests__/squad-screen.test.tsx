@@ -10,16 +10,22 @@ jest.mock('@/lib/data', () => ({
       { id: 'p2', name: 'Test Striker', position: 'FW', squadNumber: 9 },
     ]),
     addPlayer: jest.fn(),
+    updatePlayer: jest.fn(),
+    removePlayer: jest.fn(),
   },
 }));
 
 const mockGetSquad = jest.mocked(repository.getSquad);
 const mockAddPlayer = jest.mocked(repository.addPlayer);
+const mockUpdatePlayer = jest.mocked(repository.updatePlayer);
+const mockRemovePlayer = jest.mocked(repository.removePlayer);
 
 describe('SquadScreen', () => {
   beforeEach(() => {
     mockGetSquad.mockClear();
     mockAddPlayer.mockClear();
+    mockUpdatePlayer.mockClear();
+    mockRemovePlayer.mockClear();
   });
 
   it('groups players under position headers and omits empty sections', async () => {
@@ -54,6 +60,43 @@ describe('SquadScreen', () => {
     await userEvent.press(getByText('Add'));
 
     expect(mockAddPlayer).toHaveBeenCalledWith({ name: 'New Kid', position: 'MF', squadNumber: 8 });
+    expect(mockGetSquad).toHaveBeenCalledTimes(2);
+  });
+
+  it('opens the edit-player modal on row press, saves, and reloads the squad', async () => {
+    mockUpdatePlayer.mockResolvedValue({
+      id: 'p1',
+      name: 'Renamed Keeper',
+      position: 'GK',
+      squadNumber: 1,
+    });
+    const { findByLabelText, getByLabelText, getByText } = await render(<SquadScreen />);
+
+    await userEvent.press(await findByLabelText('Number 1, Test Keeper, Goalkeeper'));
+    await userEvent.clear(getByLabelText('Name'));
+    await userEvent.type(getByLabelText('Name'), 'Renamed Keeper');
+    await userEvent.press(getByText('Save'));
+
+    expect(mockUpdatePlayer).toHaveBeenCalledWith({
+      id: 'p1',
+      name: 'Renamed Keeper',
+      position: 'GK',
+      squadNumber: 1,
+    });
+    expect(mockGetSquad).toHaveBeenCalledTimes(2);
+  });
+
+  it('removes a player after a second confirming tap', async () => {
+    mockRemovePlayer.mockResolvedValue(undefined);
+    const { findByLabelText, getByText } = await render(<SquadScreen />);
+
+    await userEvent.press(await findByLabelText('Number 1, Test Keeper, Goalkeeper'));
+    await userEvent.press(getByText('Remove player'));
+    expect(mockRemovePlayer).not.toHaveBeenCalled();
+
+    await userEvent.press(getByText('Tap again to confirm removal'));
+
+    expect(mockRemovePlayer).toHaveBeenCalledWith('p1');
     expect(mockGetSquad).toHaveBeenCalledTimes(2);
   });
 });
