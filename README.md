@@ -55,6 +55,10 @@ npx eslint .       # lint
 npm test           # tests
 ```
 
+A Husky pre-commit hook runs `lint-staged` (ESLint `--fix` + Prettier) on
+staged files automatically — it's installed via the `prepare` script on
+`npm install`, so no extra setup is needed.
+
 ## Project structure
 
 ```

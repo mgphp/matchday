@@ -88,6 +88,9 @@ matchday
 - [x] Descriptive `accessibilityLabel`s on Table and Squad rows (position,
       team/player, stats, promotion/relegation zone); audited touch targets
       to a 44pt minimum (`Button`, `SignOutButton`)
+- [x] Husky + lint-staged pre-commit hook: ESLint `--fix` and Prettier on
+      staged files (`.husky/pre-commit`, `lint-staged` config in
+      `package.json`)
 - [ ] Store metadata (needs store accounts)
 
 ### M5 — Coach auth & real backend (matchday-api M5c, 2026-07-24)
