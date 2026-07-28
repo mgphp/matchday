@@ -2,6 +2,26 @@
 
 Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-router](https://docs.expo.dev/router/introduction/).
 
+## Features
+
+- **Matches** — fixtures grouped under "Upcoming" (scheduled/live/postponed) and
+  "Previous" (finished) sections, with pull-to-refresh and a skeleton loading
+  state while fixtures load
+- **Squad** — players grouped under GK/DF/MF/FW section headers
+- **Table** — full league standings with promotion/relegation zone
+  highlighting; implemented but currently hidden from the tab bar pending
+  further polish (`src/app/(tabs)/table.tsx`)
+- **Settings** — pick a favourite team, persisted on-device via
+  `@react-native-async-storage/async-storage`
+- **Match centre** (`/match/[id]`) — score header, events timeline (goals,
+  cards, substitutions) and lineups once teams are announced
+- **Live polling** — while a match is live, the match centre refetches
+  automatically every 30s; pull-to-refresh is available everywhere data loads
+- **Theme** — dark "pitch green" design system (see [Theme](#theme) below),
+  driven entirely by tokens in `src/theme/theme.ts`
+- **Coach auth** — sign in/register against [`matchday-api`](https://github.com/mgphp/matchday-api)
+  (see [Backend & auth](#backend--auth) below)
+
 ## Requirements
 
 - Node.js 20+
