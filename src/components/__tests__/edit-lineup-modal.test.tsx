@@ -16,6 +16,9 @@ const mockGetSquad = jest.mocked(repository.getSquad);
 const squad = [
   { id: 'p1', name: 'Sam Okafor', position: 'GK' as const, squadNumber: 1 },
   { id: 'p2', name: 'Danny Whitmore', position: 'DF' as const, squadNumber: 2 },
+  { id: 'p3', name: 'Luca Marchetti', position: 'DF' as const, squadNumber: 5 },
+  { id: 'p4', name: 'Theo Banks', position: 'MF' as const, squadNumber: 8 },
+  { id: 'p5', name: 'Jamie Cole', position: 'FW' as const, squadNumber: 9 },
 ];
 
 const match: MatchDetail = {
@@ -35,8 +38,8 @@ describe('EditLineupModal', () => {
     mockGetSquad.mockResolvedValue(squad);
   });
 
-  it('loads the squad and lets you toggle players into the lineup', async () => {
-    const { findByLabelText, getByText } = await render(
+  it('defaults to a 7-a-side, evenly-balanced formation with an empty pitch', async () => {
+    const { findByText, findAllByLabelText, getByText } = await render(
       <EditLineupModal
         visible
         onClose={jest.fn()}
@@ -46,34 +49,85 @@ describe('EditLineupModal', () => {
       />,
     );
 
+    expect(await findByText('7')).toBeTruthy();
+    expect(getByText('2-2-2')).toBeTruthy();
+    expect(await findAllByLabelText('Add a DF to this position')).toHaveLength(2);
     expect(getByText('Save lineup')).toBeDisabled();
+  });
 
-    await userEvent.press(await findByLabelText('Add Sam Okafor to the lineup'));
+  it('restricts the position picker to players in that position', async () => {
+    const { findAllByLabelText, getByText, queryByText } = await render(
+      <EditLineupModal
+        visible
+        onClose={jest.fn()}
+        match={match}
+        side="home"
+        onSubmit={jest.fn()}
+      />,
+    );
+
+    const [firstDfSlot] = await findAllByLabelText('Add a DF to this position');
+    await userEvent.press(firstDfSlot);
+
+    expect(getByText('Danny Whitmore')).toBeTruthy();
+    expect(getByText('Luca Marchetti')).toBeTruthy();
+    expect(queryByText('Theo Banks')).toBeNull();
+    expect(queryByText('Jamie Cole')).toBeNull();
+  });
+
+  it('assigns a player to a slot, removing them from the substitutes', async () => {
+    const { findAllByLabelText, getByText, findByText, findByLabelText, queryByText } =
+      await render(
+        <EditLineupModal
+          visible
+          onClose={jest.fn()}
+          match={match}
+          side="home"
+          onSubmit={jest.fn()}
+        />,
+      );
+
+    expect(await findByText(/2 Danny Whitmore/)).toBeTruthy();
+
+    const [firstDfSlot] = await findAllByLabelText('Add a DF to this position');
+    await userEvent.press(firstDfSlot);
+    await userEvent.press(getByText('Danny Whitmore'));
+
+    expect(await findByLabelText("Change Danny Whitmore's position")).toBeTruthy();
+    expect(queryByText(/2 Danny Whitmore/)).toBeNull();
     expect(getByText('Save lineup')).not.toBeDisabled();
   });
 
-  it('submits the selected players and formation for our side', async () => {
-    const onSubmit = jest.fn().mockResolvedValue(undefined);
-    const onClose = jest.fn();
-    const { findByLabelText, getByLabelText, getByText } = await render(
-      <EditLineupModal visible onClose={onClose} match={match} side="home" onSubmit={onSubmit} />,
-    );
+  it('clears an assigned slot back to a substitute', async () => {
+    const { findAllByLabelText, getByText, findByText, findByLabelText, queryByLabelText } =
+      await render(
+        <EditLineupModal
+          visible
+          onClose={jest.fn()}
+          match={match}
+          side="home"
+          onSubmit={jest.fn()}
+        />,
+      );
 
-    await userEvent.type(getByLabelText('Formation (e.g. 2-3-1)'), '2-3-1');
-    await userEvent.press(await findByLabelText('Add Sam Okafor to the lineup'));
-    await userEvent.press(getByText('Save lineup'));
+    const [firstDfSlot] = await findAllByLabelText('Add a DF to this position');
+    await userEvent.press(firstDfSlot);
+    await userEvent.press(getByText('Danny Whitmore'));
 
-    expect(onSubmit).toHaveBeenCalledWith({
-      side: 'home',
-      formation: '2-3-1',
-      players: [squad[0]],
-    });
-    expect(onClose).toHaveBeenCalled();
+    await userEvent.press(await findByLabelText("Change Danny Whitmore's position"));
+    await userEvent.press(getByText('Clear this position'));
+
+    expect(await findByText(/2 Danny Whitmore/)).toBeTruthy();
+    expect(queryByLabelText("Change Danny Whitmore's position")).toBeNull();
   });
 
-  it('pre-selects players already in our side of the lineup', async () => {
-    const withLineup: MatchDetail = { ...match, lineups: { home: [squad[1]], away: [] } };
-    const { findByLabelText } = await render(
+  it('pre-fills assignments from the existing lineup, matched by position', async () => {
+    const withLineup: MatchDetail = {
+      ...match,
+      formation: '2-2-2',
+      lineups: { home: [squad[0], squad[1]], away: [] },
+    };
+    const { findByLabelText, queryByText } = await render(
       <EditLineupModal
         visible
         onClose={jest.fn()}
@@ -83,17 +137,58 @@ describe('EditLineupModal', () => {
       />,
     );
 
-    expect(await findByLabelText('Remove Danny Whitmore from the lineup')).toBeTruthy();
+    expect(await findByLabelText("Change Sam Okafor's position")).toBeTruthy();
+    expect(await findByLabelText("Change Danny Whitmore's position")).toBeTruthy();
+    expect(queryByText(/2 Danny Whitmore/)).toBeNull();
+  });
+
+  it('increasing team size regenerates the formation options', async () => {
+    const { findByText, getByLabelText } = await render(
+      <EditLineupModal
+        visible
+        onClose={jest.fn()}
+        match={match}
+        side="home"
+        onSubmit={jest.fn()}
+      />,
+    );
+    await findByText('7');
+
+    await userEvent.press(getByLabelText('More players'));
+
+    expect(await findByText('8')).toBeTruthy();
+  });
+
+  it('submits the assigned players and formation', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined);
+    const onClose = jest.fn();
+    const { findAllByLabelText, getByText } = await render(
+      <EditLineupModal visible onClose={onClose} match={match} side="home" onSubmit={onSubmit} />,
+    );
+
+    const [firstDfSlot] = await findAllByLabelText('Add a DF to this position');
+    await userEvent.press(firstDfSlot);
+    await userEvent.press(getByText('Danny Whitmore'));
+    await userEvent.press(getByText('Save lineup'));
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      side: 'home',
+      formation: '2-2-2',
+      players: [squad[1]],
+    });
+    expect(onClose).toHaveBeenCalled();
   });
 
   it('shows an error and stays open when saving fails', async () => {
     const onSubmit = jest.fn().mockRejectedValue(new Error('nope'));
     const onClose = jest.fn();
-    const { findByLabelText, getByText, findByText } = await render(
+    const { findAllByLabelText, getByText, findByText } = await render(
       <EditLineupModal visible onClose={onClose} match={match} side="home" onSubmit={onSubmit} />,
     );
 
-    await userEvent.press(await findByLabelText('Add Sam Okafor to the lineup'));
+    const [firstDfSlot] = await findAllByLabelText('Add a DF to this position');
+    await userEvent.press(firstDfSlot);
+    await userEvent.press(getByText('Danny Whitmore'));
     await userEvent.press(getByText('Save lineup'));
 
     expect(await findByText(/Could not save the lineup/)).toBeTruthy();

@@ -200,17 +200,36 @@ already supported all of it.
       `HttpRepository` reads the match first and merges our side back in,
       since the API's PATCH replaces the whole `lineups` object rather than
       deep-merging it.
-- [x] `EditLineupModal` (`src/components/edit-lineup-modal.tsx`) — formation
-      text field, plus the full squad as a tappable multi-select list
-      (fetched on open via `repository.getSquad()`); at least one player must
-      be selected to save. Wired to a new "Edit lineup" button on the match
-      centre, next to "Edit match".
+- [x] `EditLineupModal` (`src/components/edit-lineup-modal.tsx`) — a visual
+      pitch, not a flat list:
+  - **Team size** (5–11) and **formation** (e.g. "2-2-2") steppers. Formation
+    options are generated per team size — every way to split the outfield
+    count into 3 positive DF-MF-FW parts — rather than a fixed 11-a-side
+    preset list, since this squad plays 7-/9-a-side.
+  - The pitch renders one circular slot per formation slot (GK row at the
+    bottom, then DF/MF/FW rows moving up the pitch toward the opponent's
+    goal). Tapping an empty slot opens a picker restricted to squad players
+    of that slot's position; tapping a filled slot lets you reassign or
+    clear it.
+  - **Substitutes** are computed, not picked: whichever squad players aren't
+    currently in a pitch slot.
+  - **No positional metadata is stored** — reopening the editor re-places
+    the saved starting XI into slots by matching each player's squad
+    `position` to a slot of the same group (defenders are interchangeable
+    within the back line, so slot identity within a group doesn't need to
+    survive a save/reload round trip). Changing team size or formation
+    re-runs the same placement over whoever's currently assigned, so
+    tweaking the shape doesn't lose the squad selection.
+  - Wired to a new "Edit lineup" button on the match centre, next to
+    "Edit match".
 - [x] Match centre shows the formation next to whichever lineup column is
       ours (`data.home.id === ownTeam.id`, via `useTeam()`).
-- [x] Tests: `updateLineup` (mock + HTTP), `EditLineupModal`, and match centre
-      wiring.
-- **Known gap:** no visual pitch/formation diagram — this is a formation
-  _label_ plus a flat starting-XI list, not a positional layout.
+- [x] Tests: `updateLineup` (mock + HTTP), `EditLineupModal` (formation/team
+      size steppers, position-restricted picker, assign/clear, pre-fill from
+      an existing lineup), and match centre wiring.
+- **Known gap:** the pitch is schematic (rows of circles), not a
+  geometrically accurate positional diagram — there's no left/right or
+  precise x/y placement within a row.
 
 ## Definition of done (every milestone)
 
