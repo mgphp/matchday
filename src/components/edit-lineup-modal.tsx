@@ -1,37 +1,144 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { StateView } from '@/components/state-view';
-import { TextField } from '@/components/text-field';
 import { repository } from '@/lib/data';
 import type { LineupUpdate } from '@/lib/data/repository';
 import type { MatchDetail, Player } from '@/lib/types';
 import { colors, radii, spacing, typography } from '@/theme/theme';
 
-function PlayerOption({
+const MIN_TEAM_SIZE = 5;
+const MAX_TEAM_SIZE = 11;
+const DEFAULT_TEAM_SIZE = 7;
+
+/** Pitch background — deliberately a real grass green, not a theme token. */
+const PITCH_GREEN = '#1e5631';
+const PITCH_LINE = 'rgba(255,255,255,0.35)';
+
+type Group = 'GK' | 'DF' | 'MF' | 'FW';
+
+interface Slot {
+  id: string;
+  group: Group;
+}
+
+/** Every way to split `outfield` players into 3 positive groups (DF-MF-FW). */
+function formationsFor(outfield: number): string[] {
+  const options: string[] = [];
+  for (let df = 1; df <= outfield - 2; df++) {
+    for (let mf = 1; mf <= outfield - df - 1; mf++) {
+      const fw = outfield - df - mf;
+      if (fw >= 1) options.push(`${df}-${mf}-${fw}`);
+    }
+  }
+  return options;
+}
+
+/** The most evenly-spread split — a reasonable default when nothing else applies. */
+function mostBalanced(options: string[]): string {
+  return options.reduce((best, option) => {
+    const variance = (values: number[]) => {
+      const mean = values.reduce((a, b) => a + b, 0) / values.length;
+      return values.reduce((sum, v) => sum + (v - mean) ** 2, 0);
+    };
+    const parts = (formation: string) => formation.split('-').map(Number);
+    return variance(parts(option)) < variance(parts(best)) ? option : best;
+  }, options[0]);
+}
+
+function buildSlots(formation: string): Slot[] {
+  const [df, mf, fw] = formation.split('-').map(Number);
+  const slots: Slot[] = [{ id: 'GK-0', group: 'GK' }];
+  for (let i = 0; i < df; i++) slots.push({ id: `DF-${i}`, group: 'DF' });
+  for (let i = 0; i < mf; i++) slots.push({ id: `MF-${i}`, group: 'MF' });
+  for (let i = 0; i < fw; i++) slots.push({ id: `FW-${i}`, group: 'FW' });
+  return slots;
+}
+
+/**
+ * Greedily places players into slots matching their squad position. Slot
+ * identity within a group is arbitrary (defenders are interchangeable), so
+ * this is all the "memory" a lineup needs — no positional metadata to store.
+ */
+function placeByPosition(players: Player[], slots: Slot[]): Record<string, Player> {
+  const assignments: Record<string, Player> = {};
+  const remaining = [...players];
+  for (const slot of slots) {
+    const index = remaining.findIndex((player) => player.position === slot.group);
+    if (index === -1) continue;
+    assignments[slot.id] = remaining[index];
+    remaining.splice(index, 1);
+  }
+  return assignments;
+}
+
+const GROUP_ORDER: Group[] = ['FW', 'MF', 'DF', 'GK'];
+
+function PitchSlot({
+  group,
   player,
-  selected,
   onPress,
 }: {
-  player: Player;
-  selected: boolean;
+  group: Group;
+  player?: Player;
   onPress: () => void;
 }) {
+  const label = player
+    ? `Change ${player.name}'s position`
+    : `Add a ${group === 'GK' ? 'goalkeeper' : group} to this position`;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ selected }}
-      accessibilityLabel={`${selected ? 'Remove' : 'Add'} ${player.name} ${selected ? 'from' : 'to'} the lineup`}
+      accessibilityLabel={label}
       onPress={onPress}
-      style={[styles.row, selected && styles.rowSelected]}
+      style={[styles.slot, player && styles.slotFilled]}
     >
-      <Text style={styles.number}>{player.squadNumber}</Text>
-      <Text style={styles.name}>{player.name}</Text>
-      <Text style={styles.position}>{player.position}</Text>
+      <Text style={styles.slotText}>{player ? player.squadNumber : '+'}</Text>
     </Pressable>
+  );
+}
+
+function Stepper({
+  label,
+  value,
+  onDecrement,
+  onIncrement,
+  decrementLabel,
+  incrementLabel,
+}: {
+  label: string;
+  value: string;
+  onDecrement: () => void;
+  onIncrement: () => void;
+  decrementLabel: string;
+  incrementLabel: string;
+}) {
+  return (
+    <View style={styles.stepperRow}>
+      <Text style={styles.stepperLabel}>{label}</Text>
+      <View style={styles.stepperControl}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={decrementLabel}
+          onPress={onDecrement}
+          style={styles.stepperButton}
+        >
+          <Text style={styles.stepperButtonText}>–</Text>
+        </Pressable>
+        <Text style={styles.stepperValue}>{value}</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={incrementLabel}
+          onPress={onIncrement}
+          style={styles.stepperButton}
+        >
+          <Text style={styles.stepperButtonText}>+</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -51,10 +158,28 @@ export function EditLineupModal({
 }) {
   const [squad, setSquad] = useState<Player[] | null>(null);
   const [loadError, setLoadError] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    () => new Set((match.lineups?.[side] ?? []).map((player) => player.id)),
+
+  const initialTeamSize = useMemo(() => {
+    if (!match.formation) return DEFAULT_TEAM_SIZE;
+    const outfield = match.formation.split('-').reduce((sum, part) => sum + Number(part), 0);
+    const size = outfield + 1;
+    return Math.min(MAX_TEAM_SIZE, Math.max(MIN_TEAM_SIZE, size));
+  }, [match.formation]);
+
+  const [teamSize, setTeamSize] = useState(initialTeamSize);
+  const formationOptions = useMemo(() => formationsFor(teamSize - 1), [teamSize]);
+  const [formationIndex, setFormationIndex] = useState(() => {
+    const options = formationsFor(initialTeamSize - 1);
+    const existing = match.formation ? options.indexOf(match.formation) : -1;
+    return existing === -1 ? options.indexOf(mostBalanced(options)) : existing;
+  });
+  const formation = formationOptions[formationIndex] ?? mostBalanced(formationOptions);
+  const slots = useMemo(() => buildSlots(formation), [formation]);
+
+  const [assignments, setAssignments] = useState<Record<string, Player>>(() =>
+    placeByPosition(match.lineups?.[side] ?? [], slots),
   );
-  const [formation, setFormation] = useState(match.formation ?? '');
+  const [pickerSlot, setPickerSlot] = useState<Slot | null>(null);
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -76,30 +201,57 @@ export function EditLineupModal({
     };
   }, [visible]);
 
-  const toggle = (id: string) => {
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+  const changeTeamSize = (next: number) => {
+    const clamped = Math.min(MAX_TEAM_SIZE, Math.max(MIN_TEAM_SIZE, next));
+    if (clamped === teamSize) return;
+    const options = formationsFor(clamped - 1);
+    const nextFormation = mostBalanced(options);
+    const nextSlots = buildSlots(nextFormation);
+    setTeamSize(clamped);
+    setFormationIndex(options.indexOf(nextFormation));
+    setAssignments((current) => placeByPosition(Object.values(current), nextSlots));
+  };
+
+  const changeFormation = (delta: number) => {
+    const nextIndex = (formationIndex + delta + formationOptions.length) % formationOptions.length;
+    const nextSlots = buildSlots(formationOptions[nextIndex]);
+    setFormationIndex(nextIndex);
+    setAssignments((current) => placeByPosition(Object.values(current), nextSlots));
+  };
+
+  const assignedIds = new Set(Object.values(assignments).map((player) => player.id));
+  const substitutes = (squad ?? []).filter((player) => !assignedIds.has(player.id));
+  const eligibleForPicker = pickerSlot
+    ? (squad ?? []).filter(
+        (player) => player.position === pickerSlot.group && !assignedIds.has(player.id),
+      )
+    : [];
+
+  const assign = (slot: Slot, player: Player) => {
+    setAssignments((current) => ({ ...current, [slot.id]: player }));
+    setPickerSlot(null);
+  };
+
+  const clearSlot = (slot: Slot) => {
+    setAssignments((current) => {
+      const next = { ...current };
+      delete next[slot.id];
       return next;
     });
+    setPickerSlot(null);
   };
 
   const handleClose = () => {
     setError(undefined);
+    setPickerSlot(null);
     onClose();
   };
 
   const handleSubmit = async () => {
-    if (!squad) return;
     setError(undefined);
     setIsSubmitting(true);
     try {
-      await onSubmit({
-        side,
-        formation: formation.trim() || undefined,
-        players: squad.filter((player) => selectedIds.has(player.id)),
-      });
+      await onSubmit({ side, formation, players: Object.values(assignments) });
       onClose();
     } catch {
       setError('Could not save the lineup. Try again.');
@@ -116,56 +268,136 @@ export function EditLineupModal({
       onRequestClose={handleClose}
     >
       <Screen>
-        <View style={styles.header}>
-          <SectionHeader title="Edit lineup" variant="accent" />
-          <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={handleClose}>
-            <Text style={styles.close}>Close</Text>
-          </Pressable>
-        </View>
-        <TextField
-          label="Formation (e.g. 2-3-1)"
-          value={formation}
-          onChangeText={setFormation}
-          autoCapitalize="none"
-        />
-        {loadError ? (
-          <StateView
-            state="error"
-            message="Could not load the squad."
-            onRetry={() => {
-              setLoadError(false);
-              repository
-                .getSquad()
-                .then(setSquad)
-                .catch(() => setLoadError(true));
-            }}
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.header}>
+            <SectionHeader title="Edit lineup" variant="accent" />
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={handleClose}>
+              <Text style={styles.close}>Close</Text>
+            </Pressable>
+          </View>
+
+          <Stepper
+            label="Team size"
+            value={String(teamSize)}
+            onDecrement={() => changeTeamSize(teamSize - 1)}
+            onIncrement={() => changeTeamSize(teamSize + 1)}
+            decrementLabel="Fewer players"
+            incrementLabel="More players"
           />
-        ) : !squad ? (
-          <StateView state="loading" />
-        ) : (
-          <ScrollView contentContainerStyle={styles.list}>
-            {squad.map((player) => (
-              <PlayerOption
-                key={player.id}
-                player={player}
-                selected={selectedIds.has(player.id)}
-                onPress={() => toggle(player.id)}
-              />
-            ))}
-          </ScrollView>
-        )}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Button
-          label={isSubmitting ? 'Saving…' : 'Save lineup'}
-          onPress={handleSubmit}
-          disabled={isSubmitting || !squad || selectedIds.size === 0}
-        />
+          <Stepper
+            label="Formation"
+            value={formation}
+            onDecrement={() => changeFormation(-1)}
+            onIncrement={() => changeFormation(1)}
+            decrementLabel="Previous formation"
+            incrementLabel="Next formation"
+          />
+
+          {loadError ? (
+            <StateView
+              state="error"
+              message="Could not load the squad."
+              onRetry={() => {
+                setLoadError(false);
+                repository
+                  .getSquad()
+                  .then(setSquad)
+                  .catch(() => setLoadError(true));
+              }}
+            />
+          ) : !squad ? (
+            <StateView state="loading" />
+          ) : (
+            <>
+              <View style={styles.pitch}>
+                <View style={styles.halfwayLine} />
+                <View style={styles.goalBox} />
+                {GROUP_ORDER.map((group) => (
+                  <View key={group} style={styles.pitchRow}>
+                    {slots
+                      .filter((slot) => slot.group === group)
+                      .map((slot) => (
+                        <PitchSlot
+                          key={slot.id}
+                          group={group}
+                          player={assignments[slot.id]}
+                          onPress={() => setPickerSlot(slot)}
+                        />
+                      ))}
+                  </View>
+                ))}
+              </View>
+
+              {pickerSlot ? (
+                <View style={styles.picker}>
+                  <Text style={styles.pickerTitle}>
+                    {pickerSlot.group === 'GK' ? 'Goalkeeper' : pickerSlot.group}
+                  </Text>
+                  {assignments[pickerSlot.id] ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => clearSlot(pickerSlot)}
+                      style={styles.pickerRow}
+                    >
+                      <Text style={styles.pickerClear}>Clear this position</Text>
+                    </Pressable>
+                  ) : null}
+                  {eligibleForPicker.length === 0 ? (
+                    <Text style={styles.emptyText}>No available players for this position.</Text>
+                  ) : (
+                    eligibleForPicker.map((player) => (
+                      <Pressable
+                        key={player.id}
+                        accessibilityRole="button"
+                        accessibilityLabel={player.name}
+                        onPress={() => assign(pickerSlot, player)}
+                        style={styles.pickerRow}
+                      >
+                        <Text style={styles.pickerNumber}>{player.squadNumber}</Text>
+                        <Text style={styles.pickerName}>{player.name}</Text>
+                      </Pressable>
+                    ))
+                  )}
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setPickerSlot(null)}
+                    style={styles.pickerRow}
+                  >
+                    <Text style={styles.pickerCancel}>Cancel</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <View>
+                  <Text style={styles.subsTitle}>Substitutes</Text>
+                  {substitutes.length === 0 ? (
+                    <Text style={styles.emptyText}>Everyone is in the starting lineup.</Text>
+                  ) : (
+                    substitutes.map((player) => (
+                      <Text key={player.id} style={styles.subRow}>
+                        {player.squadNumber} {player.name} · {player.position}
+                      </Text>
+                    ))
+                  )}
+                </View>
+              )}
+            </>
+          )}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          <Button
+            label={isSubmitting ? 'Saving…' : 'Save lineup'}
+            onPress={handleSubmit}
+            disabled={isSubmitting || !squad || Object.keys(assignments).length === 0}
+          />
+        </ScrollView>
       </Screen>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  content: {
+    gap: spacing.md,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -175,10 +407,99 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.accent,
   },
-  list: {
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  stepperLabel: {
+    ...typography.body,
+    color: colors.text,
+  },
+  stepperControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  stepperButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.full,
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  stepperButtonText: {
+    ...typography.heading,
+    color: colors.accent,
+  },
+  stepperValue: {
+    ...typography.body,
+    fontWeight: '600',
+    color: colors.text,
+    minWidth: 56,
+    textAlign: 'center',
+  },
+  pitch: {
+    borderRadius: radii.lg,
+    backgroundColor: PITCH_GREEN,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.sm,
+    gap: spacing.lg,
+    overflow: 'hidden',
+  },
+  halfwayLine: {
+    position: 'absolute',
+    left: spacing.sm,
+    right: spacing.sm,
+    top: '55%',
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: PITCH_LINE,
+  },
+  goalBox: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    left: '30%',
+    right: '30%',
+    height: 40,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: PITCH_LINE,
+    borderRadius: radii.sm,
+  },
+  pitchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+  },
+  slot: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: PITCH_LINE,
+  },
+  slotFilled: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  slotText: {
+    ...typography.body,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  picker: {
     gap: spacing.xs,
   },
-  row: {
+  pickerTitle: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  pickerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -189,23 +510,37 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surfaceRaised,
   },
-  rowSelected: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accentMuted,
-  },
-  number: {
+  pickerNumber: {
     ...typography.body,
     color: colors.textSecondary,
     width: spacing.lg,
     textAlign: 'right',
   },
-  name: {
+  pickerName: {
     ...typography.body,
     color: colors.text,
-    flex: 1,
   },
-  position: {
+  pickerClear: {
+    ...typography.body,
+    color: colors.danger,
+  },
+  pickerCancel: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+  subsTitle: {
     ...typography.caption,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  subRow: {
+    ...typography.body,
+    color: colors.textSecondary,
+    paddingVertical: spacing.xs / 2,
+  },
+  emptyText: {
+    ...typography.body,
     color: colors.textSecondary,
   },
   error: {
