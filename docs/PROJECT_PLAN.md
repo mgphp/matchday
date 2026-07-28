@@ -148,6 +148,44 @@ matchday-api).
 - [x] Squad screen (`src/app/(tabs)/squad.tsx`) — "Add player" button opens
       the modal; on success, refetches the squad
 
+### M7 — Manage squad & fixtures: edit/remove players, add/edit matches
+
+Closes the write-path gap M6 left open: a coach could add a player but never
+edit one, and had no way to create a fixture or record a score at all
+(seeding/patching matches was still a script run by hand against
+matchday-api). Everything here is UI-only — matchday-api's M6 endpoints
+already supported all of it.
+
+- [x] Repository additions (`src/lib/data/repository.ts` +
+      `mock-repository.ts` + `http-repository.ts`): `updatePlayer`,
+      `removePlayer`, `createMatch`, `updateMatchScore`. The two squad writes
+      follow `addPlayer`'s existing read-modify-write pattern (matchday-api
+      only exposes a whole-array squad `PUT`).
+- [x] `TeamProvider`/`useTeam()` (`src/lib/team-context.tsx`) — `AuthGate` now
+      tracks the resolved `ManagedTeam`, not just its id, and provides it so
+      screens can build a fixture with the coach's own team on one side
+      without a second network round-trip.
+- [x] `ChoiceChips` (`src/components/choice-chips.tsx`) — generic single-select
+      chip row, factored out for match status and home/away (position choice
+      in `AddPlayerModal` was left as-is rather than risk its existing tests).
+- [x] `AddFixtureModal` — opponent name/short name, competition, ground,
+      date/time (as separate `YYYY-MM-DD`/`HH:MM` fields — kickoff strings in
+      this app are a literal UTC-labelled wall clock time, not a real
+      timezone conversion, matching every existing fixture), and a home/away
+      toggle. Wired to the Matches tab's new "Add fixture" button.
+- [x] `EditMatchModal` — status chips (scheduled/live/finished/postponed),
+      score fields (live/finished only) and a minute field (live only).
+      Wired to an "Edit match" button on the match centre screen.
+- [x] `EditPlayerModal` — same fields as `AddPlayerModal`, pre-filled, plus a
+      "Remove player" action that requires a second confirming tap (no native
+      `Alert.alert` dependency). Squad rows are now pressable and open it.
+- [x] Tests: repository methods (mock + HTTP), all three new modals,
+      `TeamProvider`/`useTeam`, and the screen wiring (`squad-screen.test.tsx`
+      edit/remove flow; `matches-screen.test.tsx` updated for the new
+      "Add fixture" button appearing in the button-role query).
+- **Known gap:** no server-side validation that a coach doesn't double-book a
+  kickoff slot, and no undo on player removal beyond the confirm tap.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)

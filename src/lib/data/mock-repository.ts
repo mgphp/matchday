@@ -1,6 +1,6 @@
-import type { Lineups, Match, MatchEvent, Player, Standing, Team } from '@/lib/types';
+import type { Lineups, Match, MatchDetail, MatchEvent, Player, Standing, Team } from '@/lib/types';
 
-import type { MatchdayRepository } from './repository';
+import type { MatchdayRepository, MatchScoreUpdate, NewFixtureInput } from './repository';
 
 const teams: Record<string, Team> = {
   rovers: { id: 'rovers', name: 'Northgate Rovers', shortName: 'NGR' },
@@ -202,5 +202,31 @@ export const mockRepository: MatchdayRepository = {
     const newPlayer: Player = { ...player, id: `p${squad.length + 1}` };
     squad.push(newPlayer);
     return respond(newPlayer);
+  },
+  updatePlayer: (player) => {
+    const index = squad.findIndex((existing) => existing.id === player.id);
+    if (index === -1) return Promise.reject(new Error(`No player with id ${player.id}`));
+    squad[index] = player;
+    return respond(player);
+  },
+  removePlayer: (id) => {
+    const index = squad.findIndex((player) => player.id === id);
+    if (index !== -1) squad.splice(index, 1);
+    return respond(undefined);
+  },
+  createMatch: (input: NewFixtureInput) => {
+    const match: Match = { ...input, id: `m${fixtures.length + 1}`, status: 'scheduled' };
+    fixtures.push(match);
+    return respond<MatchDetail>({ ...match, events: [] });
+  },
+  updateMatchScore: (id, update: MatchScoreUpdate) => {
+    const index = fixtures.findIndex((fixture) => fixture.id === id);
+    if (index === -1) return Promise.reject(new Error(`No match with id ${id}`));
+    fixtures[index] = { ...fixtures[index], ...update };
+    return respond<MatchDetail>({
+      ...fixtures[index],
+      events: events[id] ?? [],
+      lineups: lineups[id],
+    });
   },
 };
