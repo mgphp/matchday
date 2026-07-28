@@ -7,6 +7,7 @@ import { SectionHeader } from '@/components/section-header';
 import { SkeletonCard } from '@/components/skeleton-card';
 import { StateView } from '@/components/state-view';
 import { repository } from '@/lib/data';
+import { useFavouriteTeam } from '@/lib/favourite-team';
 import type { Match } from '@/lib/types';
 import { useData } from '@/lib/use-data';
 import { colors, spacing } from '@/theme/theme';
@@ -17,16 +18,35 @@ function isUpcoming(match: Match) {
   return match.status !== 'finished';
 }
 
-function groupByStatus(matches: Match[]) {
+function isFavourite(match: Match, teamId: string | null) {
+  return teamId != null && (match.home.id === teamId || match.away.id === teamId);
+}
+
+/** Stable sort that pins the favourite team's fixtures to the top of a section. */
+function pinFavourite(matches: Match[], teamId: string | null) {
+  if (teamId == null) return matches;
+  return [...matches].sort(
+    (a, b) => Number(isFavourite(b, teamId)) - Number(isFavourite(a, teamId)),
+  );
+}
+
+function groupByStatus(matches: Match[], teamId: string | null) {
   return [
-    { title: 'Upcoming', data: matches.filter(isUpcoming) },
-    { title: 'Previous', data: matches.filter((match) => !isUpcoming(match)) },
+    { title: 'Upcoming', data: pinFavourite(matches.filter(isUpcoming), teamId) },
+    {
+      title: 'Previous',
+      data: pinFavourite(
+        matches.filter((match) => !isUpcoming(match)),
+        teamId,
+      ),
+    },
   ].filter((section) => section.data.length > 0);
 }
 
 export default function MatchesScreen() {
   const router = useRouter();
   const { status, data, reload, refresh, isRefreshing } = useData(repository.getFixtures);
+  const { teamId } = useFavouriteTeam();
 
   return (
     <Screen>
@@ -42,7 +62,7 @@ export default function MatchesScreen() {
         <StateView state="empty" message="No fixtures scheduled." />
       ) : (
         <SectionList
-          sections={groupByStatus(data)}
+          sections={groupByStatus(data, teamId)}
           keyExtractor={(match) => match.id}
           renderItem={({ item }) => (
             <MatchCard match={item} onPress={() => router.push(`/match/${item.id}`)} />

@@ -47,4 +47,26 @@ describe('createHttpRepository', () => {
     const repo = createHttpRepository(options);
     await expect(repo.getTable()).rejects.toThrow('403');
   });
+
+  it('addPlayer reads the current squad, appends the new player and PUTs the full array', async () => {
+    const existing = [{ id: 'p1', name: 'Sam Okafor', position: 'GK', squadNumber: 1 }];
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse(existing))
+      .mockResolvedValueOnce(jsonResponse([]));
+
+    const repo = createHttpRepository(options);
+    const added = await repo.addPlayer({ name: 'New Kid', position: 'MF', squadNumber: 9 });
+
+    expect(added.name).toBe('New Kid');
+    expect(added.id).toBeTruthy();
+    expect(fetchMock).toHaveBeenNthCalledWith(1, 'https://api.example.com/teams/team-1/squad', {
+      headers: { authorization: 'Bearer test-token' },
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://api.example.com/teams/team-1/squad', {
+      method: 'PUT',
+      headers: { authorization: 'Bearer test-token', 'content-type': 'application/json' },
+      body: JSON.stringify([...existing, added]),
+    });
+  });
 });

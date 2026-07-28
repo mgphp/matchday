@@ -10,4 +10,6 @@ export interface MatchdayRepository {
   getMatch(id: string): Promise<MatchDetail>;
   getTable(): Promise<Standing[]>;
   getSquad(): Promise<Player[]>;
+  /** Appends a player to the squad (id generated) and returns it. */
+  addPlayer(player: Omit<Player, 'id'>): Promise<Player>;
 }

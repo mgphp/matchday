@@ -11,13 +11,26 @@ import { colors, spacing, typography } from '@/theme/theme';
 const PROMOTION_SPOTS = 2;
 const RELEGATION_SPOTS = 2;
 
+/** e.g. 1 -> "1st", 12 -> "12th", 23 -> "23rd" */
+function ordinal(position: number) {
+  const lastDigit = position % 10;
+  const lastTwoDigits = position % 100;
+  if (lastDigit === 1 && lastTwoDigits !== 11) return `${position}st`;
+  if (lastDigit === 2 && lastTwoDigits !== 12) return `${position}nd`;
+  if (lastDigit === 3 && lastTwoDigits !== 13) return `${position}rd`;
+  return `${position}th`;
+}
+
 function StandingRow({ standing, teamCount }: { standing: Standing; teamCount: number }) {
   const isPromotion = standing.position <= PROMOTION_SPOTS;
   const isRelegation = standing.position > teamCount - RELEGATION_SPOTS;
+  const zoneLabel = isPromotion ? ', promotion zone' : isRelegation ? ', relegation zone' : '';
 
   return (
     <View
       testID={`standing-row-${standing.team.id}`}
+      accessible
+      accessibilityLabel={`${ordinal(standing.position)}, ${standing.team.name}, played ${standing.played}, goal difference ${standing.goalDifference}, ${standing.points} points${zoneLabel}`}
       style={[styles.row, isPromotion && styles.promotion, isRelegation && styles.relegation]}
     >
       <Text style={styles.position}>{standing.position}</Text>

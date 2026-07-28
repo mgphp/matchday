@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { SectionList, StyleSheet, Text, View } from 'react-native';
 
+import { AddPlayerModal } from '@/components/add-player-modal';
 import { Badge } from '@/components/badge';
+import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
@@ -28,8 +31,14 @@ function groupByPosition(players: Player[]) {
 }
 
 function PlayerRow({ player }: { player: Player }) {
+  const position = POSITION_LABELS[player.position].replace(/s$/, '');
+
   return (
-    <View style={styles.row}>
+    <View
+      accessible
+      accessibilityLabel={`Number ${player.squadNumber}, ${player.name}, ${position}`}
+      style={styles.row}
+    >
       <Text style={styles.number}>{player.squadNumber}</Text>
       <Text style={styles.name}>{player.name}</Text>
       <Badge label={player.position} />
@@ -39,9 +48,11 @@ function PlayerRow({ player }: { player: Player }) {
 
 export default function SquadScreen() {
   const { status, data, reload } = useData(repository.getSquad);
+  const [isAddingPlayer, setIsAddingPlayer] = useState(false);
 
   return (
     <Screen>
+      <Button label="Add player" onPress={() => setIsAddingPlayer(true)} />
       {status === 'loading' ? (
         <StateView state="loading" />
       ) : status === 'error' ? (
@@ -61,6 +72,14 @@ export default function SquadScreen() {
           />
         </Card>
       )}
+      <AddPlayerModal
+        visible={isAddingPlayer}
+        onClose={() => setIsAddingPlayer(false)}
+        onSubmit={async (player) => {
+          await repository.addPlayer(player);
+          await reload();
+        }}
+      />
     </Screen>
   );
 }
