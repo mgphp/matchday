@@ -11,7 +11,7 @@ export function SignOutButton() {
       accessibilityRole="button"
       accessibilityLabel="Sign out"
       onPress={signOut}
-      hitSlop={spacing.sm}
+      hitSlop={spacing.md}
     >
       <Text style={styles.label}>Sign out</Text>
     </Pressable>

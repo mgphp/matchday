@@ -62,6 +62,10 @@ Coverage thresholds (~80% statements/functions/lines, 75% branches) apply to
 thin AWS SDK integration code, tracked separately under M5 in
 `docs/PROJECT_PLAN.md` rather than gated by this threshold.
 
+A Husky pre-commit hook runs `lint-staged` (ESLint `--fix` + Prettier) on
+staged files automatically — it's installed via the `prepare` script on
+`npm install`, so no extra setup is needed.
+
 ## Project structure
 
 ```
@@ -73,11 +77,12 @@ matchday
 │   │   └── match/[id].tsx # match centre (events, lineups, live polling)
 │   ├── components
 │   │   ├── auth       # AuthGate + login/register/onboarding screens (coach auth flow)
+│   │   ├── add-player-modal.tsx # squad write path — name/position/number form
 │   │   ├── Screen, Card, Button, Badge, MatchCard, SkeletonCard, TextField, StateView
 │   │   └── __tests__
 │   ├── lib
 │   │   ├── auth       # Cognito wrapper (cognito.ts) + AuthProvider/useAuth (auth-context.tsx)
-│   │   ├── data       # repository interface, mock + HttpRepository, swap point (index.ts)
+│   │   ├── data       # repository interface (incl. addPlayer), mock + HttpRepository, swap point (index.ts)
 │   │   ├── coach-api.ts # club/coach/team management endpoints (registration, onboarding)
 │   │   ├── types.ts   # domain models (Match, Standing, Player)
 │   │   ├── use-data.ts # async data hook (loading/error/success)

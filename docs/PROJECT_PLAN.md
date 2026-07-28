@@ -88,6 +88,14 @@ matchday
       run in CI. Excludes `src/lib/auth/` and `src/components/auth/` — the
       Cognito wrapper is thin SDK integration code, not core app logic;
       raising its coverage is future work, not blocked by this threshold
+- [x] Matches screen pins the favourite team's fixtures to the top of the
+      Upcoming/Previous sections (stable sort, `src/app/(tabs)/index.tsx`)
+- [x] Descriptive `accessibilityLabel`s on Table and Squad rows (position,
+      team/player, stats, promotion/relegation zone); audited touch targets
+      to a 44pt minimum (`Button`, `SignOutButton`)
+- [x] Husky + lint-staged pre-commit hook: ESLint `--fix` and Prettier on
+      staged files (`.husky/pre-commit`, `lint-staged` config in
+      `package.json`)
 - [ ] Store metadata (needs store accounts)
 
 ### M5 — Coach auth & real backend (matchday-api M5c, 2026-07-24)
@@ -117,6 +125,25 @@ Wires the app to the deployed [`matchday-api`](https://github.com/mgphp/matchday
 - **Note:** Cognito auth requires `react-native-get-random-values` (native
   crypto polyfill), so the app now needs a dev client build — Expo Go no
   longer works. See README's Backend & auth section.
+
+### M6 — Squad management: add player (2026-07-24)
+
+First write path in the app (everything before this was read-only against
+matchday-api).
+
+- [x] `MatchdayRepository.addPlayer` (`src/lib/data/repository.ts`) —
+      implemented by both `mockRepository` (pushes into the in-memory squad)
+      and `HttpRepository` (`src/lib/data/http-repository.ts`, GET the
+      current squad then PUT the full array back — matchday-api only exposes
+      a whole-array squad endpoint, no atomic append; acceptable race-condition
+      tradeoff for a single-coach team)
+- [x] `AddPlayerModal` (`src/components/add-player-modal.tsx`) — name,
+      position (GK/DF/MF/FW toggle) and squad number form, presented as a
+      full-screen `Modal` from the Squad tab (not an expo-router route, so it
+      needs no navigation-context wiring and the Squad screen can just
+      `reload()` after a successful add)
+- [x] Squad screen (`src/app/(tabs)/squad.tsx`) — "Add player" button opens
+      the modal; on success, refetches the squad
 
 ## Definition of done (every milestone)
 
