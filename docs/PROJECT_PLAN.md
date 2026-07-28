@@ -186,6 +186,32 @@ already supported all of it.
 - **Known gap:** no server-side validation that a coach doesn't double-book a
   kickoff slot, and no undo on player removal beyond the confirm tap.
 
+### M8 — Lineup and formation editor
+
+- [x] `Match.formation?: string` (`src/lib/types.ts`) — our team's shape for a
+      match, e.g. "2-3-1". Free text rather than a fixed enum: this squad
+      plays 7- or 9-a-side, not 11, so a preset list of standard formations
+      would be wrong. matchday-api's `Match` type gained the same field (and
+      closed its pre-existing `venue` gap) in a type-only PR — no deploy
+      needed, the handler already stored/returned unrecognised fields.
+- [x] Repository: `updateLineup(id, { side, formation?, players })`. Both
+      implementations only ever touch **our** side — we don't manage the
+      opponent's roster, so their `lineups` entry (if any) is left alone.
+      `HttpRepository` reads the match first and merges our side back in,
+      since the API's PATCH replaces the whole `lineups` object rather than
+      deep-merging it.
+- [x] `EditLineupModal` (`src/components/edit-lineup-modal.tsx`) — formation
+      text field, plus the full squad as a tappable multi-select list
+      (fetched on open via `repository.getSquad()`); at least one player must
+      be selected to save. Wired to a new "Edit lineup" button on the match
+      centre, next to "Edit match".
+- [x] Match centre shows the formation next to whichever lineup column is
+      ours (`data.home.id === ownTeam.id`, via `useTeam()`).
+- [x] Tests: `updateLineup` (mock + HTTP), `EditLineupModal`, and match centre
+      wiring.
+- **Known gap:** no visual pitch/formation diagram — this is a formation
+  _label_ plus a flat starting-XI list, not a positional layout.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)

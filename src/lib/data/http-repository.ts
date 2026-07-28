@@ -1,6 +1,11 @@
 import type { Match, MatchDetail, Player, Standing } from '@/lib/types';
 
-import type { MatchdayRepository, MatchScoreUpdate, NewFixtureInput } from './repository';
+import type {
+  LineupUpdate,
+  MatchdayRepository,
+  MatchScoreUpdate,
+  NewFixtureInput,
+} from './repository';
 
 interface HttpRepositoryOptions {
   baseUrl: string;
@@ -89,6 +94,24 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
       const match = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`, {
         method: 'PATCH',
         body: update,
+      });
+      return withVenue(match);
+    },
+    updateLineup: async (id, update: LineupUpdate) => {
+      // The API replaces the whole `lineups` object on PATCH (no deep merge),
+      // so read the current match first to keep the other side untouched.
+      const current = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`);
+      const lineups = {
+        ...(current.lineups ?? { home: [], away: [] }),
+        [update.side]: update.players,
+      };
+      const match = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`, {
+        method: 'PATCH',
+        // `formation` round-trips the same way `venue` does — see withVenue above.
+        body: {
+          lineups,
+          ...(update.formation !== undefined ? { formation: update.formation } : {}),
+        },
       });
       return withVenue(match);
     },

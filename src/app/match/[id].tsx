@@ -6,11 +6,13 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native
 import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
+import { EditLineupModal } from '@/components/edit-lineup-modal';
 import { EditMatchModal } from '@/components/edit-match-modal';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { StateView } from '@/components/state-view';
 import { repository } from '@/lib/data';
+import { useTeam } from '@/lib/team-context';
 import type { MatchDetail, MatchEvent, Player } from '@/lib/types';
 import { useData } from '@/lib/use-data';
 import { colors, spacing, typography } from '@/theme/theme';
@@ -55,10 +57,21 @@ function EventRow({ event }: { event: MatchEvent }) {
   );
 }
 
-function LineupColumn({ title, players }: { title: string; players: Player[] }) {
+function LineupColumn({
+  title,
+  players,
+  formation,
+}: {
+  title: string;
+  players: Player[];
+  formation?: string;
+}) {
   return (
     <View style={styles.lineupColumn}>
-      <Text style={styles.lineupTitle}>{title}</Text>
+      <Text style={styles.lineupTitle}>
+        {title}
+        {formation ? ` (${formation})` : ''}
+      </Text>
       {players.map((player) => (
         <Text key={player.id} style={styles.lineupPlayer}>
           {player.squadNumber} {player.name}
@@ -99,7 +112,9 @@ export default function MatchDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const getMatch = useCallback(() => repository.getMatch(String(id)), [id]);
   const { status, data, reload, refresh, isRefreshing } = useData(getMatch);
+  const ownTeam = useTeam();
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingLineup, setIsEditingLineup] = useState(false);
 
   const isLive = data?.status === 'live';
   useEffect(() => {
@@ -126,6 +141,7 @@ export default function MatchDetailScreen() {
 
   const homeScorers = scorersFor(data.events, 'home');
   const awayScorers = scorersFor(data.events, 'away');
+  const ownSide = data.home.id === ownTeam.id ? 'home' : 'away';
 
   return (
     <Screen>
@@ -148,7 +164,14 @@ export default function MatchDetailScreen() {
             </View>
           ) : null}
           <Text style={styles.venue}>{data.venue}</Text>
-          <Button label="Edit match" variant="secondary" onPress={() => setIsEditing(true)} />
+          <View style={styles.actionsRow}>
+            <Button label="Edit match" variant="secondary" onPress={() => setIsEditing(true)} />
+            <Button
+              label="Edit lineup"
+              variant="secondary"
+              onPress={() => setIsEditingLineup(true)}
+            />
+          </View>
         </Card>
 
         <Card>
@@ -164,8 +187,16 @@ export default function MatchDetailScreen() {
           <SectionHeader title="Lineups" variant="accent" />
           {data.lineups ? (
             <View style={styles.lineupsRow}>
-              <LineupColumn title={data.home.shortName} players={data.lineups.home} />
-              <LineupColumn title={data.away.shortName} players={data.lineups.away} />
+              <LineupColumn
+                title={data.home.shortName}
+                players={data.lineups.home}
+                formation={ownSide === 'home' ? data.formation : undefined}
+              />
+              <LineupColumn
+                title={data.away.shortName}
+                players={data.lineups.away}
+                formation={ownSide === 'away' ? data.formation : undefined}
+              />
             </View>
           ) : (
             <Text style={styles.emptyText}>Teams not announced yet.</Text>
@@ -178,6 +209,16 @@ export default function MatchDetailScreen() {
         match={data}
         onSubmit={async (update) => {
           await repository.updateMatchScore(data.id, update);
+          await refresh();
+        }}
+      />
+      <EditLineupModal
+        visible={isEditingLineup}
+        onClose={() => setIsEditingLineup(false)}
+        match={data}
+        side={ownSide}
+        onSubmit={async (update) => {
+          await repository.updateLineup(data.id, update);
           await refresh();
         }}
       />
@@ -214,6 +255,10 @@ const styles = StyleSheet.create({
   venue: {
     ...typography.caption,
     color: colors.textSecondary,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   emptyText: {
     ...typography.body,
