@@ -31,8 +31,14 @@ function groupByPosition(players: Player[]) {
 }
 
 function PlayerRow({ player }: { player: Player }) {
+  const position = POSITION_LABELS[player.position].replace(/s$/, '');
+
   return (
-    <View style={styles.row}>
+    <View
+      accessible
+      accessibilityLabel={`Number ${player.squadNumber}, ${player.name}, ${position}`}
+      style={styles.row}
+    >
       <Text style={styles.number}>{player.squadNumber}</Text>
       <Text style={styles.name}>{player.name}</Text>
       <Badge label={player.position} />

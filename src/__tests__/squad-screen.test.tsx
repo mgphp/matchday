@@ -34,6 +34,13 @@ describe('SquadScreen', () => {
     expect(await findByText('Test Striker')).toBeTruthy();
   });
 
+  it('gives each player row a descriptive accessibility label', async () => {
+    const { findByLabelText } = await render(<SquadScreen />);
+
+    expect(await findByLabelText('Number 1, Test Keeper, Goalkeeper')).toBeTruthy();
+    expect(await findByLabelText('Number 9, Test Striker, Forward')).toBeTruthy();
+  });
+
   it('opens the add-player modal, submits, and reloads the squad', async () => {
     mockAddPlayer.mockResolvedValue({ id: 'p3', name: 'New Kid', position: 'MF', squadNumber: 8 });
     const { findByText, getByText, getByLabelText } = await render(<SquadScreen />);
