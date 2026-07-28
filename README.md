@@ -35,25 +35,32 @@ use a dev client build (`npx eas build --profile development`, per the Builds se
 
 ## Scripts
 
-| Script            | What it does                          |
-| ----------------- | ------------------------------------- |
-| `npm start`       | Start the Expo dev server             |
-| `npm run ios`     | Start and open the iOS simulator      |
-| `npm run android` | Start and open the Android emulator   |
-| `npm run web`     | Start and open in the browser         |
-| `npm run lint`    | Lint with ESLint (`expo lint`)        |
-| `npm run format`  | Format the codebase with Prettier     |
-| `npm test`        | Run the Jest test suite (`jest-expo`) |
+| Script                  | What it does                                |
+| ----------------------- | ------------------------------------------- |
+| `npm start`             | Start the Expo dev server                   |
+| `npm run ios`           | Start and open the iOS simulator            |
+| `npm run android`       | Start and open the Android emulator         |
+| `npm run web`           | Start and open in the browser               |
+| `npm run lint`          | Lint with ESLint (`expo lint`)              |
+| `npm run format`        | Format the codebase with Prettier           |
+| `npm test`              | Run the Jest test suite (`jest-expo`)       |
+| `npm run test:coverage` | Run tests with coverage (`jest --coverage`) |
 
 ## Checks
 
 CI expects all of these to pass:
 
 ```bash
-npx tsc --noEmit   # type-check
-npx eslint .       # lint
-npm test           # tests
+npx tsc --noEmit         # type-check
+npx eslint .             # lint
+npm run test:coverage    # tests + coverage thresholds
 ```
+
+Coverage thresholds (~80% statements/functions/lines, 75% branches) apply to
+`src/lib` and `src/components`, excluding the Cognito auth wrapper
+(`src/lib/auth/`) and its screens (`src/components/auth/`) — that area is
+thin AWS SDK integration code, tracked separately under M5 in
+`docs/PROJECT_PLAN.md` rather than gated by this threshold.
 
 A Husky pre-commit hook runs `lint-staged` (ESLint `--fix` + Prettier) on
 staged files automatically — it's installed via the `prepare` script on

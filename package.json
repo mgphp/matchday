@@ -47,6 +47,7 @@
     "lint": "expo lint",
     "format": "prettier --write .",
     "test": "jest",
+    "test:coverage": "jest --coverage",
     "prepare": "husky"
   },
   "jest": {
@@ -54,7 +55,23 @@
     "testTimeout": 15000,
     "setupFiles": [
       "<rootDir>/jest.setup.js"
-    ]
+    ],
+    "collectCoverageFrom": [
+      "src/lib/**/*.{ts,tsx}",
+      "src/components/**/*.{ts,tsx}",
+      "!src/lib/types.ts",
+      "!src/lib/data/repository.ts",
+      "!src/lib/auth/**",
+      "!src/components/auth/**"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "statements": 80,
+        "branches": 75,
+        "functions": 80,
+        "lines": 80
+      }
+    }
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
