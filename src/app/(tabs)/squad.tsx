@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { SectionList, StyleSheet, Text, View } from 'react-native';
 
+import { AddPlayerModal } from '@/components/add-player-modal';
 import { Badge } from '@/components/badge';
+import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
@@ -39,9 +42,11 @@ function PlayerRow({ player }: { player: Player }) {
 
 export default function SquadScreen() {
   const { status, data, reload } = useData(repository.getSquad);
+  const [isAddingPlayer, setIsAddingPlayer] = useState(false);
 
   return (
     <Screen>
+      <Button label="Add player" onPress={() => setIsAddingPlayer(true)} />
       {status === 'loading' ? (
         <StateView state="loading" />
       ) : status === 'error' ? (
@@ -61,6 +66,14 @@ export default function SquadScreen() {
           />
         </Card>
       )}
+      <AddPlayerModal
+        visible={isAddingPlayer}
+        onClose={() => setIsAddingPlayer(false)}
+        onSubmit={async (player) => {
+          await repository.addPlayer(player);
+          await reload();
+        }}
+      />
     </Screen>
   );
 }

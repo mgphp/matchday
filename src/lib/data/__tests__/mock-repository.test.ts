@@ -38,4 +38,23 @@ describe('mockRepository', () => {
     const numbers = squad.map((player) => player.squadNumber);
     expect(new Set(numbers).size).toBe(numbers.length);
   });
+
+  it('appends a new player with a generated id and persists it', async () => {
+    // getSquad() returns the live squad array reference, not a copy — capture
+    // the count now, before addPlayer mutates that same array in place.
+    const before = await mockRepository.getSquad();
+    const beforeCount = before.length;
+
+    const added = await mockRepository.addPlayer({
+      name: 'New Kid',
+      position: 'MF',
+      squadNumber: 99,
+    });
+
+    expect(added.id).toBeTruthy();
+    expect(added.name).toBe('New Kid');
+    const after = await mockRepository.getSquad();
+    expect(after.length).toBe(beforeCount + 1);
+    expect(after).toContainEqual(added);
+  });
 });
