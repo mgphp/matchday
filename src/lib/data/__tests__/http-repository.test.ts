@@ -164,4 +164,60 @@ describe('createHttpRepository', () => {
       body: JSON.stringify(update),
     });
   });
+
+  it('updateLineup reads the match, merges our side in and PATCHes lineups + formation', async () => {
+    const awayLineup: Player[] = [
+      { id: 'a1', name: 'Opponent Player', position: 'DF', squadNumber: 4 },
+    ];
+    const ourPlayers: Player[] = [{ id: 'p1', name: 'Sam Okafor', position: 'GK', squadNumber: 1 }];
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        jsonResponse({
+          id: 'm1',
+          competition: 'Premier League',
+          kickoff: '2026-07-20T16:30:00Z',
+          status: 'live',
+          home: { id: 'team-1', name: 'Under 10 Bears', shortName: 'U10' },
+          away: { id: 'opp-1', name: 'Rivals FC', shortName: 'RIV' },
+          events: [],
+          lineups: { home: [], away: awayLineup },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          id: 'm1',
+          competition: 'Premier League',
+          kickoff: '2026-07-20T16:30:00Z',
+          status: 'live',
+          home: { id: 'team-1', name: 'Under 10 Bears', shortName: 'U10' },
+          away: { id: 'opp-1', name: 'Rivals FC', shortName: 'RIV' },
+          events: [],
+          lineups: { home: ourPlayers, away: awayLineup },
+          formation: '2-3-1',
+        }),
+      );
+
+    const repo = createHttpRepository(options);
+    const match = await repo.updateLineup('m1', {
+      side: 'home',
+      formation: '2-3-1',
+      players: ourPlayers,
+    });
+
+    expect(match.formation).toBe('2-3-1');
+    expect(match.lineups?.home).toEqual(ourPlayers);
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://api.example.com/teams/team-1/matches/m1',
+      {
+        method: 'PATCH',
+        headers: { authorization: 'Bearer test-token', 'content-type': 'application/json' },
+        body: JSON.stringify({
+          lineups: { home: ourPlayers, away: awayLineup },
+          formation: '2-3-1',
+        }),
+      },
+    );
+  });
 });

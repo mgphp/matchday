@@ -1,6 +1,11 @@
 import type { Lineups, Match, MatchDetail, MatchEvent, Player, Standing, Team } from '@/lib/types';
 
-import type { MatchdayRepository, MatchScoreUpdate, NewFixtureInput } from './repository';
+import type {
+  LineupUpdate,
+  MatchdayRepository,
+  MatchScoreUpdate,
+  NewFixtureInput,
+} from './repository';
 
 const teams: Record<string, Team> = {
   rovers: { id: 'rovers', name: 'Northgate Rovers', shortName: 'NGR' },
@@ -180,6 +185,9 @@ const lineups: Record<string, Lineups> = {
   },
 };
 
+/** Our team's formation per match, e.g. "2-3-1". */
+const formations: Record<string, string> = {};
+
 /** Simulated network latency so loading states are visible in the app. */
 const LATENCY_MS = 300;
 
@@ -194,7 +202,12 @@ export const mockRepository: MatchdayRepository = {
     if (!match) {
       return Promise.reject(new Error(`No match with id ${id}`));
     }
-    return respond({ ...match, events: events[id] ?? [], lineups: lineups[id] });
+    return respond({
+      ...match,
+      events: events[id] ?? [],
+      lineups: lineups[id],
+      formation: formations[id],
+    });
   },
   getTable: () => respond(table),
   getSquad: () => respond(squad),
@@ -227,6 +240,20 @@ export const mockRepository: MatchdayRepository = {
       ...fixtures[index],
       events: events[id] ?? [],
       lineups: lineups[id],
+      formation: formations[id],
+    });
+  },
+  updateLineup: (id, update: LineupUpdate) => {
+    const match = fixtures.find((fixture) => fixture.id === id);
+    if (!match) return Promise.reject(new Error(`No match with id ${id}`));
+    const current = lineups[id] ?? { home: [], away: [] };
+    lineups[id] = { ...current, [update.side]: update.players };
+    if (update.formation !== undefined) formations[id] = update.formation;
+    return respond<MatchDetail>({
+      ...match,
+      events: events[id] ?? [],
+      lineups: lineups[id],
+      formation: formations[id],
     });
   },
 };

@@ -15,6 +15,13 @@ export interface MatchScoreUpdate {
   minute?: number;
 }
 
+export interface LineupUpdate {
+  /** Which side is ours — the other side's lineup, if any, is left untouched. */
+  side: 'home' | 'away';
+  formation?: string;
+  players: Player[];
+}
+
 /**
  * Data source contract for the app. Screens depend on this interface only,
  * so the mock implementation can be swapped for a real API without UI changes.
@@ -35,4 +42,6 @@ export interface MatchdayRepository {
   createMatch(input: NewFixtureInput): Promise<MatchDetail>;
   /** Updates a match's score/status/minute. Rejects when no match exists for the id. */
   updateMatchScore(id: string, update: MatchScoreUpdate): Promise<MatchDetail>;
+  /** Sets our starting lineup and formation for a match. Rejects when no match exists for the id. */
+  updateLineup(id: string, update: LineupUpdate): Promise<MatchDetail>;
 }

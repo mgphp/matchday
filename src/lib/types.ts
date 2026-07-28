@@ -19,6 +19,8 @@ export interface Match {
   awayScore?: number;
   /** Current match minute, only when live */
   minute?: number;
+  /** Our team's shape for this match, e.g. "2-3-1". Free text — squad sizes vary (7-, 9-a-side, etc.). */
+  formation?: string;
 }
 
 export interface Standing {

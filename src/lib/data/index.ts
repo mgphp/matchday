@@ -17,6 +17,7 @@ export const repository: MatchdayRepository = {
   removePlayer: (...args) => activeRepository.removePlayer(...args),
   createMatch: (...args) => activeRepository.createMatch(...args),
   updateMatchScore: (...args) => activeRepository.updateMatchScore(...args),
+  updateLineup: (...args) => activeRepository.updateLineup(...args),
 };
 
 /** Swaps the live data source. Called once a coach's active team is resolved. */

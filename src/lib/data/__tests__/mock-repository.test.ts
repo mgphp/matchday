@@ -114,4 +114,25 @@ describe('mockRepository', () => {
     expect(after).toHaveLength(beforeCount - 1);
     expect(after.find((player) => player.id === 'p2')).toBeUndefined();
   });
+
+  it('updateLineup sets our side and formation without touching the other side', async () => {
+    const away = (await mockRepository.getMatch('m1')).lineups?.away;
+    const homeSquad = [{ id: 'p1', name: 'Sam Okafor', position: 'GK' as const, squadNumber: 1 }];
+
+    const updated = await mockRepository.updateLineup('m1', {
+      side: 'home',
+      formation: '2-3-1',
+      players: homeSquad,
+    });
+
+    expect(updated.formation).toBe('2-3-1');
+    expect(updated.lineups?.home).toEqual(homeSquad);
+    expect(updated.lineups?.away).toEqual(away);
+  });
+
+  it('updateLineup rejects an unknown match id', async () => {
+    await expect(
+      mockRepository.updateLineup('nope', { side: 'home', players: [] }),
+    ).rejects.toThrow('No match with id nope');
+  });
 });

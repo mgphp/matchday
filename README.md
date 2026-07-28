@@ -17,7 +17,8 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
   `@react-native-async-storage/async-storage`
 - **Match centre** (`/match/[id]`) — score header, events timeline (goals,
   cards, substitutions) and lineups once teams are announced; "Edit match"
-  updates status, score and minute
+  updates status, score and minute; "Edit lineup" picks the starting XI from
+  the squad and sets a formation (e.g. "2-3-1")
 - **Live polling** — while a match is live, the match centre refetches
   automatically every 30s; pull-to-refresh is available everywhere data loads
 - **Theme** — dark "pitch green" design system (see [Theme](#theme) below),
