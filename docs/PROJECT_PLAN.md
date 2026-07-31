@@ -332,6 +332,37 @@ derivation rather than something to track by hand.
 - **Known gap:** per-match only. Season totals per player would be a natural
   follow-up but need results aggregated across fixtures.
 
+### M12 — Rotation helper ([#34](https://github.com/mgphp/matchday/issues/34))
+
+The point of M9–M11: during a match, show who needs bringing on and who has
+had enough, so game time is shared fairly.
+
+- [x] `Match.durationMinutes?: number` — full-time length, edited via a
+      "Full-time minutes" field in `EditMatchModal` (default 90). Per-match
+      rather than a constant because youth football runs shorter than 90 and
+      varies by age group.
+- [x] `src/lib/rotation.ts`:
+  - `target` = an even split of the total playing time on offer
+    (`duration x lineup size / squad size`).
+  - `expected` = the same figure pro-rata to the clock, capped at `duration`
+    so stoppage time doesn't keep inflating what a player is owed.
+  - `status` is `under` / `on-track` / `over` against `expected`, with a
+    ±3 minute tolerance — without it the whole squad flickers amber between
+    every substitution.
+  - `dueOn` / `dueOff` pick the single most useful name in each direction
+    (least-played on the bench who is behind; most-played on the pitch who is
+    ahead), which is what a coach actually needs mid-match.
+- [x] Match centre: minutes rows show `played/target` with a teal "due on" or
+      amber "due off" tag, and a "Due off … · Due on …" hint sits next to the
+      Substitution button. Accessibility labels carry the target and status
+      too.
+- [x] Tests: 12 cases over targets, tolerance boundaries, the full-time cap,
+      empty squads and both pickers, plus the modal and screen wiring.
+- **Known gap:** "available" means the whole squad — there is no per-match
+  availability, so a player who isn't at the game still lowers everyone's
+  target and shows as permanently "due on". That is the next thing to fix
+  here, and probably means an availability step in the lineup editor.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)

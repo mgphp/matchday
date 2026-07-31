@@ -21,7 +21,14 @@ import {
   runningPeriod,
   type ClockAction,
 } from '@/lib/match-clock';
-import { playerMinutes, type PlayerMinutes } from '@/lib/player-minutes';
+import { playerMinutes } from '@/lib/player-minutes';
+import {
+  DEFAULT_DURATION_MINUTES,
+  dueOff,
+  dueOn,
+  rotation,
+  type RotationEntry,
+} from '@/lib/rotation';
 import { useTeam } from '@/lib/team-context';
 import type { MatchDetail, MatchEvent, Player } from '@/lib/types';
 import { useData } from '@/lib/use-data';
@@ -100,11 +107,19 @@ function LineupColumn({
   );
 }
 
-function MinutesRow({ entry }: { entry: PlayerMinutes }) {
+const ROTATION_LABELS: Record<RotationEntry['status'], string> = {
+  under: 'due on',
+  'on-track': 'on track',
+  over: 'due off',
+};
+
+function MinutesRow({ entry }: { entry: RotationEntry }) {
   return (
     <View
-      accessibilityLabel={`${entry.player.name}, ${entry.minutes} minutes played, ${
-        entry.isOnPitch ? 'on the pitch' : 'on the bench'
+      accessibilityLabel={`${entry.player.name}, ${entry.minutes} minutes played of ${
+        entry.target
+      } target, ${entry.isOnPitch ? 'on the pitch' : 'on the bench'}, ${
+        ROTATION_LABELS[entry.status]
       }`}
       style={styles.minutesRow}
     >
@@ -112,7 +127,15 @@ function MinutesRow({ entry }: { entry: PlayerMinutes }) {
       <Text style={[styles.minutesName, !entry.isOnPitch && styles.minutesNameBench]}>
         {entry.player.name}
       </Text>
-      <Text style={styles.minutesValue}>{entry.minutes}&#8242;</Text>
+      {entry.status !== 'on-track' ? (
+        <Text style={entry.status === 'under' ? styles.rotationUnder : styles.rotationOver}>
+          {ROTATION_LABELS[entry.status]}
+        </Text>
+      ) : null}
+      <Text style={styles.minutesValue}>
+        {entry.minutes}
+        <Text style={styles.minutesTarget}>/{entry.target}&#8242;</Text>
+      </Text>
     </View>
   );
 }
@@ -217,8 +240,18 @@ export default function MatchDetailScreen() {
           elapsed: minute,
         })
       : undefined;
-  const onPitch = minutesPlayed?.filter((entry) => entry.isOnPitch) ?? [];
-  const bench = minutesPlayed?.filter((entry) => !entry.isOnPitch) ?? [];
+  const rotationEntries = minutesPlayed
+    ? rotation({
+        minutes: minutesPlayed,
+        onPitchCount: ourLineup?.length ?? 0,
+        duration: data.durationMinutes ?? DEFAULT_DURATION_MINUTES,
+        elapsed: minute,
+      })
+    : undefined;
+  const onPitch = rotationEntries?.filter((entry) => entry.isOnPitch) ?? [];
+  const bench = rotationEntries?.filter((entry) => !entry.isOnPitch) ?? [];
+  const nextOn = rotationEntries ? dueOn(rotationEntries) : undefined;
+  const nextOff = rotationEntries ? dueOff(rotationEntries) : undefined;
 
   return (
     <Screen>
@@ -263,6 +296,13 @@ export default function MatchDetailScreen() {
               />
             ) : null}
           </View>
+          {canSubstitute && (nextOn || nextOff) ? (
+            <Text style={styles.rotationHint}>
+              {nextOff ? `Due off: ${nextOff.player.name}` : null}
+              {nextOff && nextOn ? ' · ' : null}
+              {nextOn ? `Due on: ${nextOn.player.name}` : null}
+            </Text>
+          ) : null}
         </Card>
 
         {minutesPlayed ? (
@@ -413,6 +453,25 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontWeight: '600',
     color: colors.accent,
+  },
+  minutesTarget: {
+    ...typography.caption,
+    fontWeight: '400',
+    color: colors.textDisabled,
+  },
+  rotationUnder: {
+    ...typography.caption,
+    fontWeight: '600',
+    color: colors.accent,
+  },
+  rotationOver: {
+    ...typography.caption,
+    fontWeight: '600',
+    color: colors.alert,
+  },
+  rotationHint: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
   eventRow: {
     flexDirection: 'row',

@@ -44,6 +44,12 @@ export interface Match {
   minute?: number;
   /** Our team's shape for this match, e.g. "2-3-1". Free text — squad sizes vary (7-, 9-a-side, etc.). */
   formation?: string;
+  /**
+   * Full-time length in minutes. Youth football runs shorter than 90, and it
+   * varies by age group, so this is per-match rather than a constant. Used to
+   * work out a fair share of game time — see `src/lib/rotation.ts`.
+   */
+  durationMinutes?: number;
 }
 
 export interface Standing {
