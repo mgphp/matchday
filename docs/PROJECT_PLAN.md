@@ -304,6 +304,34 @@ it, but events were read-only seed data — a coach could not record a sub.
 - **Known gap:** no way to edit or delete a recorded event — a mistyped minute
   has to be lived with.
 
+### M11 — Minutes played ([#33](https://github.com/mgphp/matchday/issues/33))
+
+With the clock (M9) and substitutions (M10) in place, playing time is a
+derivation rather than something to track by hand.
+
+- [x] `src/lib/player-minutes.ts` — `playerMinutes` takes the starting lineup,
+      the events, our side, the squad and the elapsed minutes, and returns
+      every squad player with minutes and an on-pitch flag, in squad order.
+  - Works entirely in **match-minute space**, so half time needs no special
+    handling: `elapsed` already excludes the gap and substitution minutes are
+    match minutes too.
+  - A substitution minute typed ahead of the clock is clamped to `elapsed`,
+    so a fat-fingered "70" during the 50th minute can't credit unplayed time.
+  - Handles a player coming on, going off and coming back on — each spell is
+    accumulated separately.
+  - A starter missing from the squad list (stale squad fetch) is still
+    reported rather than silently dropped.
+- [x] Match centre "Minutes played" card, split into "On pitch" and "Bench",
+      ticking live off the same clock. Shown only once a match is live or
+      finished — before kick-off everyone is on zero, which is just noise.
+      Rows carry a descriptive `accessibilityLabel` ("… 58 minutes played, on
+      the bench").
+- [x] Tests: 12 cases over the derivation (spells, out-of-order events,
+      future minutes, opponent's subs, frozen full time) plus the screen
+      wiring.
+- **Known gap:** per-match only. Season totals per player would be a natural
+  follow-up but need results aggregated across fixtures.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)

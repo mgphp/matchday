@@ -19,6 +19,9 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
   cards, substitutions) and lineups once teams are announced; "Edit match"
   updates status and score; "Edit lineup" picks the starting XI from
   the squad and sets a formation (e.g. "2-3-1")
+- **Minutes played** — once a match is under way, the match centre lists the
+  squad split into on-pitch and bench with live minutes per player, derived
+  from the lineup, the substitutions and the clock (`src/lib/player-minutes.ts`)
 - **Substitutions** — while a match is live, "Substitution" records who came
   off, who came on and at what minute (defaulting to the clock). The timeline
   and the on-pitch/bench split both follow from these events
