@@ -194,6 +194,48 @@ describe('createHttpRepository', () => {
     });
   });
 
+  it('addEvent reads the timeline, appends and PATCHes it back in minute order', async () => {
+    const existing = {
+      id: 'e1',
+      minute: 34,
+      type: 'goal' as const,
+      side: 'home' as const,
+      player: 'Jamie Cole',
+    };
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        jsonResponse({
+          id: 'm1',
+          competition: 'Premier League',
+          kickoff: '2026-07-20T16:30:00Z',
+          status: 'live',
+          home: { id: 'team-1', name: 'Under 10 Bears', shortName: 'U10' },
+          away: { id: 'opp-1', name: 'Rivals FC', shortName: 'RIV' },
+          events: [existing],
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ id: 'm1', events: [] }));
+
+    const repo = createHttpRepository(options);
+    await repo.addEvent('m1', {
+      minute: 12,
+      type: 'substitution',
+      side: 'home',
+      player: 'Andrés Vidal',
+      detail: 'for Theo Banks',
+      playerId: 'p7',
+      relatedPlayerId: 'p4',
+    });
+
+    const [, patch] = fetchMock.mock.calls[1] as [string, RequestInit];
+    const body = JSON.parse(String(patch.body)) as { events: { minute: number; id: string }[] };
+    // The new event sorts ahead of the existing one, and keeps the old one.
+    expect(body.events.map((event) => event.minute)).toEqual([12, 34]);
+    expect(body.events[1].id).toBe('e1');
+    expect(body.events[0].id).toEqual(expect.stringMatching(/^e-/));
+  });
+
   it('updateLineup reads the match, merges our side in and PATCHes lineups + formation', async () => {
     const awayLineup: Player[] = [
       { id: 'a1', name: 'Opponent Player', position: 'DF', squadNumber: 4 },

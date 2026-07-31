@@ -99,6 +99,31 @@ describe('MatchDetailScreen', () => {
     expect(await findByText("LIVE 62'")).toBeTruthy();
   });
 
+  it('hides the Substitution control for a match that is not live', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'm2' });
+
+    const { findByText, queryByText } = await renderScreen();
+    await findByText('Kings Athletic v Westfield Wanderers');
+
+    expect(queryByText('Substitution')).toBeNull();
+  });
+
+  it('records a substitution onto the timeline', async () => {
+    const { findByText, getByText, getByLabelText } = await renderScreen();
+    await findByText('Northgate Rovers 1 – 0 Harbour City');
+
+    await userEvent.press(getByText('Substitution'));
+    await findByText('Coming off');
+
+    // p7 already came on for p4 in the seeded events, so the pitch holds
+    // p1/p2/p3/p7/p5 and the bench holds p4 and p6.
+    await userEvent.press(getByLabelText('Take off 10 Ryo Tanaka, MF'));
+    await userEvent.press(getByLabelText('Bring on 9 Jamie Cole, FW'));
+    await userEvent.press(getByText('Record substitution'));
+
+    expect(await findByText('for Ryo Tanaka')).toBeTruthy();
+  });
+
   it('opens the lineup editor from the Edit lineup button', async () => {
     const { findByText, getByText } = await renderScreen();
     await findByText('Northgate Rovers 1 – 0 Harbour City');
