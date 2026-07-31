@@ -231,6 +231,26 @@ already supported all of it.
   geometrically accurate positional diagram — there's no left/right or
   precise x/y placement within a row.
 
+### M7.1 — Clashing kickoff warning ([#28](https://github.com/mgphp/matchday/issues/28))
+
+Closes an M7 known gap: nothing stopped a coach adding two fixtures in the
+same slot.
+
+- [x] `src/lib/fixture-clash.ts` — `findClashingFixture` returns an existing
+      fixture within `CLASH_WINDOW_MINUTES` (2 hours) of a proposed kickoff.
+      Postponed fixtures are skipped (they aren't being played), and an
+      `ignoreMatchId` option keeps a future "edit fixture" flow from clashing
+      with itself.
+- [x] `AddFixtureModal` takes `existingFixtures` and shows an amber warning
+      naming the clash. **Advisory only — Add is never disabled.** Tournaments
+      and double-headers are real, and a coach knows their own diary better
+      than a two-hour rule does.
+- [x] Tests: window boundaries on both sides, postponed fixtures, unparseable
+      dates, self-ignore, plus the modal warning appearing/not appearing and
+      leaving Add enabled.
+- **Known gap:** the check is client-side only. Two devices adding the same
+  slot at once would both succeed — fine for a single-coach team.
+
 ### M9 — Match clock ([#31](https://github.com/mgphp/matchday/issues/31))
 
 Before this, a live match's minute was a number the coach typed into

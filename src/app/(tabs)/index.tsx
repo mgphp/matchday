@@ -90,6 +90,7 @@ export default function MatchesScreen() {
         visible={isAddingFixture}
         onClose={() => setIsAddingFixture(false)}
         ownTeam={ownTeam}
+        existingFixtures={data ?? []}
         onSubmit={async (input) => {
           await repository.createMatch(input);
           await reload();

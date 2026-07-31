@@ -7,7 +7,8 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
 - **Matches** — fixtures grouped under "Upcoming" (scheduled/live/postponed) and
   "Previous" (finished) sections, with pull-to-refresh and a skeleton loading
   state while fixtures load; "Add fixture" creates a new match against the
-  coach's own team
+  coach's own team, warning (but not blocking) if a kickoff lands within two
+  hours of a fixture already in the diary
 - **Squad** — players grouped under GK/DF/MF/FW section headers; "Add player"
   and tapping a row to edit or remove them
 - **Table** — full league standings with promotion/relegation zone
