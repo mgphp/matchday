@@ -272,6 +272,38 @@ value — nothing ticked, and closing the app froze the match.
   time only, so added time has to be handled by when the coach presses the
   next control.
 
+### M10 — Substitutions ([#32](https://github.com/mgphp/matchday/issues/32))
+
+`MatchEvent` already had a `'substitution'` type and the match centre rendered
+it, but events were read-only seed data — a coach could not record a sub.
+
+- [x] `MatchEvent.playerId` / `relatedPlayerId` (`src/lib/types.ts`) — optional
+      squad ids alongside the existing display strings. Display keeps using
+      `player`/`detail`; anything reasoning about _which_ player needs ids,
+      because names are not stable identifiers. `relatedPlayerId` is named
+      generically so a goal can later record its assister the same way.
+- [x] `src/lib/lineup-state.ts` — `playersOnPitch` applies substitutions to the
+      starting lineup in **minute order** (not array order, since a coach can
+      record one late), keeping the substitute in the slot the outgoing player
+      vacated. `playersOnBench` is the complement. Substitutions recorded
+      without ids are ignored rather than name-matched: guessing would
+      silently corrupt the result.
+- [x] Repository: `addEvent(id, event)` (mock + HTTP), keeping the timeline
+      minute-sorted. The HTTP implementation is read-modify-write against the
+      existing `PATCH`, exactly like `updateLineup` — **no new matchday-api
+      endpoint was needed**, contrary to what the issue assumed.
+- [x] `SubstitutionModal` — "Coming off" lists the pitch, "Coming on" lists the
+      bench, minute pre-filled from the clock but editable. Rows in the two
+      lists carry "Take off …" / "Bring on …" accessibility labels, since they
+      are otherwise indistinguishable to a screen reader.
+- [x] Match centre: a "Substitution" button, shown only while the match is
+      live (before kick-off, the lineup editor is the right tool).
+- [x] Tests: `lineup-state` (out-of-order subs, sub-on-then-off, unknown
+      player, opponent's subs, id-less legacy events), `SubstitutionModal`,
+      both repositories, and the match centre wiring.
+- **Known gap:** no way to edit or delete a recorded event — a mistyped minute
+  has to be lived with.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)

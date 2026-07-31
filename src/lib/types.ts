@@ -76,6 +76,17 @@ export interface MatchEvent {
   side: 'home' | 'away';
   /** e.g. assist or player coming off */
   detail?: string;
+  /**
+   * Squad id of `player`, when they are one of ours. Display uses `player`;
+   * anything that has to reason about *which* player (who is on the pitch,
+   * minutes played) needs this, because names aren't stable identifiers.
+   */
+  playerId?: string;
+  /**
+   * Squad id of the other player involved — for a substitution, the one going
+   * off. Named generically so a goal could later record its assister here.
+   */
+  relatedPlayerId?: string;
 }
 
 export interface Lineups {

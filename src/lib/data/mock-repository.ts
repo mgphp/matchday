@@ -6,6 +6,7 @@ import type {
   MatchdayRepository,
   MatchScoreUpdate,
   NewFixtureInput,
+  NewMatchEvent,
 } from './repository';
 
 const teams: Record<string, Team> = {
@@ -162,6 +163,8 @@ const events: Record<string, MatchEvent[]> = {
       player: 'Andrés Vidal',
       side: 'home',
       detail: 'for Theo Banks',
+      playerId: 'p7',
+      relatedPlayerId: 'p4',
     },
   ],
   m4: [
@@ -254,6 +257,20 @@ export const mockRepository: MatchdayRepository = {
     return respond<MatchDetail>({
       ...fixtures[index],
       events: events[id] ?? [],
+      lineups: lineups[id],
+      formation: formations[id],
+    });
+  },
+  addEvent: (id, event: NewMatchEvent) => {
+    const match = fixtures.find((fixture) => fixture.id === id);
+    if (!match) return Promise.reject(new Error(`No match with id ${id}`));
+    const existing = events[id] ?? [];
+    const added: MatchEvent = { ...event, id: `e-${id}-${existing.length + 1}` };
+    // Keep the timeline in minute order — a coach can record a sub late.
+    events[id] = [...existing, added].sort((a, b) => a.minute - b.minute);
+    return respond<MatchDetail>({
+      ...match,
+      events: events[id],
       lineups: lineups[id],
       formation: formations[id],
     });

@@ -11,6 +11,7 @@ import { EditMatchModal } from '@/components/edit-match-modal';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { StateView } from '@/components/state-view';
+import { SubstitutionModal } from '@/components/substitution-modal';
 import { repository } from '@/lib/data';
 import {
   applyClockAction,
@@ -132,6 +133,7 @@ export default function MatchDetailScreen() {
   const ownTeam = useTeam();
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingLineup, setIsEditingLineup] = useState(false);
+  const [isSubstituting, setIsSubstituting] = useState(false);
 
   const isLive = data?.status === 'live';
   useEffect(() => {
@@ -175,6 +177,11 @@ export default function MatchDetailScreen() {
   const homeScorers = scorersFor(data.events, 'home');
   const awayScorers = scorersFor(data.events, 'away');
   const ownSide = data.home.id === ownTeam.id ? 'home' : 'away';
+  const minute = displayMinute(data, now);
+  // Only offer a substitution once the match has actually started — before
+  // kick-off "who is on the pitch" is just the starting lineup, edited via
+  // the lineup editor instead.
+  const canSubstitute = data.status === 'live';
 
   return (
     <Screen>
@@ -186,7 +193,7 @@ export default function MatchDetailScreen() {
       >
         <Card>
           <View style={styles.headerRow}>
-            {statusBadge(data, displayMinute(data, now), clockAction)}
+            {statusBadge(data, minute, clockAction)}
             <Text style={styles.competition}>{data.competition}</Text>
           </View>
           <Text style={styles.score}>{scoreline(data)}</Text>
@@ -211,6 +218,13 @@ export default function MatchDetailScreen() {
               variant="secondary"
               onPress={() => setIsEditingLineup(true)}
             />
+            {canSubstitute ? (
+              <Button
+                label="Substitution"
+                variant="secondary"
+                onPress={() => setIsSubstituting(true)}
+              />
+            ) : null}
           </View>
         </Card>
 
@@ -259,6 +273,17 @@ export default function MatchDetailScreen() {
         side={ownSide}
         onSubmit={async (update) => {
           await repository.updateLineup(data.id, update);
+          await refresh();
+        }}
+      />
+      <SubstitutionModal
+        visible={isSubstituting}
+        onClose={() => setIsSubstituting(false)}
+        match={data}
+        side={ownSide}
+        minute={minute}
+        onSubmit={async (event) => {
+          await repository.addEvent(data.id, event);
           await refresh();
         }}
       />

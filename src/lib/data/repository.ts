@@ -1,12 +1,16 @@
 import type {
   Match,
   MatchDetail,
+  MatchEvent,
   MatchPeriod,
   MatchStatus,
   Player,
   Standing,
   Team,
 } from '@/lib/types';
+
+/** A match event without its id, which the repository generates. */
+export type NewMatchEvent = Omit<MatchEvent, 'id'>;
 
 export interface NewFixtureInput {
   competition: string;
@@ -59,4 +63,6 @@ export interface MatchdayRepository {
   updateMatchClock(id: string, update: MatchClockUpdate): Promise<MatchDetail>;
   /** Sets our starting lineup and formation for a match. Rejects when no match exists for the id. */
   updateLineup(id: string, update: LineupUpdate): Promise<MatchDetail>;
+  /** Appends an event to a match's timeline. Rejects when no match exists for the id. */
+  addEvent(id: string, event: NewMatchEvent): Promise<MatchDetail>;
 }
