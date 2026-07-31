@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, SectionList, StyleSheet, Text } from 'react-native';
 
 import { AddPlayerModal } from '@/components/add-player-modal';
@@ -9,6 +9,7 @@ import { EditPlayerModal } from '@/components/edit-player-modal';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { StateView } from '@/components/state-view';
+import { UndoBanner } from '@/components/undo-banner';
 import { repository } from '@/lib/data';
 import type { Player, PlayerPosition } from '@/lib/types';
 import { useData } from '@/lib/use-data';
@@ -52,6 +53,9 @@ export default function SquadScreen() {
   const { status, data, reload } = useData(repository.getSquad);
   const [isAddingPlayer, setIsAddingPlayer] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+  const [removedPlayer, setRemovedPlayer] = useState<Player | null>(null);
+  // Stable identity so UndoBanner's dismiss timer isn't reset on every render.
+  const dismissUndo = useCallback(() => setRemovedPlayer(null), []);
 
   return (
     <Screen>
@@ -96,8 +100,21 @@ export default function SquadScreen() {
           }}
           onRemove={async () => {
             await repository.removePlayer(editingPlayer.id);
+            setRemovedPlayer(editingPlayer);
             await reload();
           }}
+        />
+      ) : null}
+      {removedPlayer ? (
+        <UndoBanner
+          message={`Removed ${removedPlayer.name}`}
+          onUndo={async () => {
+            const player = removedPlayer;
+            setRemovedPlayer(null);
+            await repository.restorePlayer(player);
+            await reload();
+          }}
+          onDismiss={dismissUndo}
         />
       ) : null}
     </Screen>

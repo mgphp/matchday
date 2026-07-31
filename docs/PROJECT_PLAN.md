@@ -231,6 +231,29 @@ already supported all of it.
   geometrically accurate positional diagram — there's no left/right or
   precise x/y placement within a row.
 
+### M7.2 — Undo a player removal ([#29](https://github.com/mgphp/matchday/issues/29))
+
+Closes the other M7 known gap: removal was guarded by a confirming tap, but
+once through there was no way back.
+
+- [x] `MatchdayRepository.restorePlayer(player)` (mock + HTTP) — deliberately
+      **not** `addPlayer`. `addPlayer` mints a new id, and an undo that
+      changes a player's identity would orphan any match event referencing
+      their `playerId`. `restorePlayer` writes the original object back, and
+      is a no-op if the player is somehow already there (double-tapped Undo).
+- [x] `UndoBanner` (`src/components/undo-banner.tsx`) — transient bar with an
+      Undo action, auto-dismissing after 8 seconds. Not a blocking confirm:
+      the removal has already gone through, so ignoring the banner is a valid
+      answer. `accessibilityLiveRegion="polite"` so it is announced.
+- [x] Squad screen holds the removed player and shows the banner; Undo calls
+      `restorePlayer` and refetches.
+- [x] Tests: banner (press, timeout, timeout disabled, no dismiss after
+      unmount), both repository implementations, and the screen flow asserting
+      the **original id** comes back and `addPlayer` is never called.
+- **Known gap:** `restorePlayer` appends rather than restoring the original
+  index. The Squad screen groups by position, so this is invisible in
+  practice.
+
 ### M9 — Match clock ([#31](https://github.com/mgphp/matchday/issues/31))
 
 Before this, a live match's minute was a number the coach typed into

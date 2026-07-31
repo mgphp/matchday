@@ -194,6 +194,37 @@ describe('createHttpRepository', () => {
     });
   });
 
+  it('restorePlayer PUTs the squad back with the original id intact', async () => {
+    const restored: Player = { id: 'p3', name: 'Luca Marchetti', position: 'DF', squadNumber: 5 };
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        jsonResponse([{ id: 'p1', name: 'Sam Okafor', position: 'GK', squadNumber: 1 }]),
+      )
+      .mockResolvedValueOnce(jsonResponse([]));
+
+    const repo = createHttpRepository(options);
+    await repo.restorePlayer(restored);
+
+    const [, put] = fetchMock.mock.calls[1] as [string, RequestInit];
+    const body = JSON.parse(String(put.body)) as Player[];
+    expect(body).toHaveLength(2);
+    expect(body[1]).toEqual(restored);
+  });
+
+  it('restorePlayer skips the write when the player is already in the squad', async () => {
+    const existing: Player = { id: 'p1', name: 'Sam Okafor', position: 'GK', squadNumber: 1 };
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse([existing]));
+
+    const repo = createHttpRepository(options);
+    await repo.restorePlayer(existing);
+
+    // Read only — no PUT.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('updateLineup reads the match, merges our side in and PATCHes lineups + formation', async () => {
     const awayLineup: Player[] = [
       { id: 'a1', name: 'Opponent Player', position: 'DF', squadNumber: 4 },

@@ -9,7 +9,8 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
   state while fixtures load; "Add fixture" creates a new match against the
   coach's own team
 - **Squad** — players grouped under GK/DF/MF/FW section headers; "Add player"
-  and tapping a row to edit or remove them
+  and tapping a row to edit or remove them. A removal can be undone from a
+  banner for 8 seconds, restoring the player's original id
 - **Table** — full league standings with promotion/relegation zone
   highlighting; implemented but currently hidden from the tab bar pending
   further polish (`src/app/(tabs)/table.tsx`)

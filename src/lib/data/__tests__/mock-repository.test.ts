@@ -127,6 +127,27 @@ describe('mockRepository', () => {
     expect(after.find((player) => player.id === 'p2')).toBeUndefined();
   });
 
+  it('restorePlayer puts a removed player back with their original id', async () => {
+    const before = await mockRepository.getSquad();
+    const player = before.find((entry) => entry.id === 'p3')!;
+    await mockRepository.removePlayer('p3');
+
+    await mockRepository.restorePlayer(player);
+    const after = await mockRepository.getSquad();
+
+    expect(after.find((entry) => entry.id === 'p3')).toEqual(player);
+  });
+
+  it('restorePlayer is a no-op when the player is already there', async () => {
+    const squad = await mockRepository.getSquad();
+    const player = squad[0];
+    const beforeCount = squad.length;
+
+    await mockRepository.restorePlayer(player);
+
+    expect(await mockRepository.getSquad()).toHaveLength(beforeCount);
+  });
+
   it('updateLineup sets our side and formation without touching the other side', async () => {
     const away = (await mockRepository.getMatch('m1')).lineups?.away;
     const homeSquad = [{ id: 'p1', name: 'Sam Okafor', position: 'GK' as const, squadNumber: 1 }];

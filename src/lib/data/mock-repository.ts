@@ -228,6 +228,12 @@ export const mockRepository: MatchdayRepository = {
     if (index !== -1) squad.splice(index, 1);
     return respond(undefined);
   },
+  restorePlayer: (player) => {
+    // Appends rather than restoring the original index — the Squad screen
+    // groups by position, so the ordering shift is invisible in practice.
+    if (!squad.some((existing) => existing.id === player.id)) squad.push(player);
+    return respond(player);
+  },
   createMatch: (input: NewFixtureInput) => {
     const match: Match = { ...input, id: `m${fixtures.length + 1}`, status: 'scheduled' };
     fixtures.push(match);

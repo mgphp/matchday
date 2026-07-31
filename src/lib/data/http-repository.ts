@@ -81,6 +81,16 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
         body: squad.filter((player) => player.id !== id),
       });
     },
+    restorePlayer: async (player) => {
+      const squad = await request<Player[]>(options, `teams/${teamId}/squad`);
+      // Guard against a double-tap on Undo re-adding the same player twice.
+      if (squad.some((existing) => existing.id === player.id)) return player;
+      await request<Player[]>(options, `teams/${teamId}/squad`, {
+        method: 'PUT',
+        body: [...squad, player],
+      });
+      return player;
+    },
     createMatch: async (input: NewFixtureInput) => {
       const match = await request<MatchDetail>(options, `teams/${teamId}/matches`, {
         method: 'POST',
