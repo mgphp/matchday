@@ -1,5 +1,20 @@
 export type MatchStatus = 'scheduled' | 'live' | 'finished' | 'postponed';
 
+export type MatchPeriodName = 'first' | 'second';
+
+/**
+ * One played period of a match. The clock is derived from these timestamps
+ * rather than stored as a number, so the minute keeps advancing while the app
+ * is closed and survives a restart.
+ */
+export interface MatchPeriod {
+  period: MatchPeriodName;
+  /** ISO 8601 instant the period kicked off */
+  startedAt: string;
+  /** ISO 8601 instant the period was stopped — absent while it is in progress */
+  endedAt?: string;
+}
+
 export interface Team {
   id: string;
   name: string;
@@ -17,7 +32,15 @@ export interface Match {
   away: Team;
   homeScore?: number;
   awayScore?: number;
-  /** Current match minute, only when live */
+  /**
+   * Periods played so far, in order. Source of truth for the match clock.
+   * Absent on a fixture that has not kicked off.
+   */
+  periods?: MatchPeriod[];
+  /**
+   * Legacy hand-entered minute, kept for fixtures created before the clock
+   * existed. Only used when `periods` is absent — see `src/lib/match-clock.ts`.
+   */
   minute?: number;
   /** Our team's shape for this match, e.g. "2-3-1". Free text — squad sizes vary (7-, 9-a-side, etc.). */
   formation?: string;

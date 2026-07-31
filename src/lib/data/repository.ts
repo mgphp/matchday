@@ -1,4 +1,12 @@
-import type { Match, MatchDetail, MatchStatus, Player, Standing, Team } from '@/lib/types';
+import type {
+  Match,
+  MatchDetail,
+  MatchPeriod,
+  MatchStatus,
+  Player,
+  Standing,
+  Team,
+} from '@/lib/types';
 
 export interface NewFixtureInput {
   competition: string;
@@ -12,7 +20,12 @@ export interface MatchScoreUpdate {
   status: MatchStatus;
   homeScore?: number;
   awayScore?: number;
-  minute?: number;
+}
+
+export interface MatchClockUpdate {
+  status: MatchStatus;
+  /** Replaces the match's periods wholesale — the caller derives them. */
+  periods: MatchPeriod[];
 }
 
 export interface LineupUpdate {
@@ -42,6 +55,8 @@ export interface MatchdayRepository {
   createMatch(input: NewFixtureInput): Promise<MatchDetail>;
   /** Updates a match's score/status/minute. Rejects when no match exists for the id. */
   updateMatchScore(id: string, update: MatchScoreUpdate): Promise<MatchDetail>;
+  /** Starts, pauses or ends the match clock. Rejects when no match exists for the id. */
+  updateMatchClock(id: string, update: MatchClockUpdate): Promise<MatchDetail>;
   /** Sets our starting lineup and formation for a match. Rejects when no match exists for the id. */
   updateLineup(id: string, update: LineupUpdate): Promise<MatchDetail>;
 }

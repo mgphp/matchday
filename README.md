@@ -17,10 +17,16 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
   `@react-native-async-storage/async-storage`
 - **Match centre** (`/match/[id]`) — score header, events timeline (goals,
   cards, substitutions) and lineups once teams are announced; "Edit match"
-  updates status, score and minute; "Edit lineup" picks the starting XI from
+  updates status and score; "Edit lineup" picks the starting XI from
   the squad and sets a formation (e.g. "2-3-1")
+- **Match clock** — "Kick off", "Half time", "Second half" and "Full time"
+  controls on the match centre record period timestamps, and the displayed
+  minute is derived from them. The clock therefore keeps advancing while the
+  app is closed, survives a restart, and excludes the half-time gap
+  (`src/lib/match-clock.ts`)
 - **Live polling** — while a match is live, the match centre refetches
-  automatically every 30s; pull-to-refresh is available everywhere data loads
+  automatically every 30s and the derived clock ticks every second in between;
+  pull-to-refresh is available everywhere data loads
 - **Theme** — dark "pitch green" design system (see [Theme](#theme) below),
   driven entirely by tokens in `src/theme/theme.ts`
 - **Coach auth** — sign in/register against [`matchday-api`](https://github.com/mgphp/matchday-api)

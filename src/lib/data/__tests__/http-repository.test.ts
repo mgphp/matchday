@@ -137,8 +137,8 @@ describe('createHttpRepository', () => {
     });
   });
 
-  it('updateMatchScore PATCHes only the score/status/minute fields', async () => {
-    const update = { status: 'live' as const, homeScore: 1, awayScore: 0, minute: 12 };
+  it('updateMatchScore PATCHes only the score/status fields', async () => {
+    const update = { status: 'live' as const, homeScore: 1, awayScore: 0 };
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
       jsonResponse({
         id: 'm2',
@@ -162,6 +162,35 @@ describe('createHttpRepository', () => {
       method: 'PATCH',
       headers: { authorization: 'Bearer test-token', 'content-type': 'application/json' },
       body: JSON.stringify(update),
+    });
+  });
+
+  it('updateMatchClock PATCHes periods and clears the legacy minute', async () => {
+    const update = {
+      status: 'live' as const,
+      periods: [{ period: 'first' as const, startedAt: '2026-09-05T10:00:00.000Z' }],
+    };
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      jsonResponse({
+        id: 'm2',
+        competition: 'Premier League',
+        kickoff: '2026-09-05T10:00:00Z',
+        status: 'live',
+        home: { id: 'team-1', name: 'Under 10 Bears', shortName: 'U10' },
+        away: { id: 'opp-1', name: 'Rivals FC', shortName: 'RIV' },
+        periods: update.periods,
+        events: [],
+      }),
+    );
+
+    const repo = createHttpRepository(options);
+    const match = await repo.updateMatchClock('m2', update);
+
+    expect(match.periods).toEqual(update.periods);
+    expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/teams/team-1/matches/m2', {
+      method: 'PATCH',
+      headers: { authorization: 'Bearer test-token', 'content-type': 'application/json' },
+      body: JSON.stringify({ ...update, minute: null }),
     });
   });
 

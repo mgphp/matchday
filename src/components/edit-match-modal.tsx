@@ -36,24 +36,20 @@ export function EditMatchModal({
   const [status, setStatus] = useState<MatchStatus>(match.status);
   const [homeScore, setHomeScore] = useState(match.homeScore?.toString() ?? '');
   const [awayScore, setAwayScore] = useState(match.awayScore?.toString() ?? '');
-  const [minute, setMinute] = useState(match.minute?.toString() ?? '');
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const parsedHome = Number(homeScore);
   const parsedAway = Number(awayScore);
-  const parsedMinute = Number(minute);
 
   const isComplete =
-    (!hasScore(status) ||
-      (Number.isInteger(parsedHome) &&
-        parsedHome >= 0 &&
-        homeScore.length > 0 &&
-        Number.isInteger(parsedAway) &&
-        parsedAway >= 0 &&
-        awayScore.length > 0)) &&
-    (status !== 'live' ||
-      (Number.isInteger(parsedMinute) && parsedMinute >= 0 && minute.length > 0));
+    !hasScore(status) ||
+    (Number.isInteger(parsedHome) &&
+      parsedHome >= 0 &&
+      homeScore.length > 0 &&
+      Number.isInteger(parsedAway) &&
+      parsedAway >= 0 &&
+      awayScore.length > 0);
 
   const handleClose = () => {
     setError(undefined);
@@ -68,7 +64,6 @@ export function EditMatchModal({
         status,
         homeScore: hasScore(status) ? parsedHome : undefined,
         awayScore: hasScore(status) ? parsedAway : undefined,
-        minute: status === 'live' ? parsedMinute : undefined,
       });
       onClose();
     } catch {
@@ -120,12 +115,10 @@ export function EditMatchModal({
           </View>
         ) : null}
         {status === 'live' ? (
-          <TextField
-            label="Minute"
-            value={minute}
-            onChangeText={setMinute}
-            keyboardType="number-pad"
-          />
+          <Text style={styles.hint}>
+            The match minute comes from the clock — use Kick off / Half time / Full time on the
+            match screen.
+          </Text>
         ) : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Button
@@ -154,6 +147,10 @@ const styles = StyleSheet.create({
   },
   scoreField: {
     flex: 1,
+  },
+  hint: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
   error: {
     ...typography.caption,

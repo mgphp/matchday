@@ -2,6 +2,7 @@ import type { Lineups, Match, MatchDetail, MatchEvent, Player, Standing, Team } 
 
 import type {
   LineupUpdate,
+  MatchClockUpdate,
   MatchdayRepository,
   MatchScoreUpdate,
   NewFixtureInput,
@@ -236,6 +237,20 @@ export const mockRepository: MatchdayRepository = {
     const index = fixtures.findIndex((fixture) => fixture.id === id);
     if (index === -1) return Promise.reject(new Error(`No match with id ${id}`));
     fixtures[index] = { ...fixtures[index], ...update };
+    return respond<MatchDetail>({
+      ...fixtures[index],
+      events: events[id] ?? [],
+      lineups: lineups[id],
+      formation: formations[id],
+    });
+  },
+  updateMatchClock: (id, update: MatchClockUpdate) => {
+    const index = fixtures.findIndex((fixture) => fixture.id === id);
+    if (index === -1) return Promise.reject(new Error(`No match with id ${id}`));
+    // Drop the legacy hand-entered minute: once a match has periods, the
+    // clock is derived and a stale `minute` would only confuse things.
+    const { minute: _legacyMinute, ...rest } = fixtures[index];
+    fixtures[index] = { ...rest, ...update };
     return respond<MatchDetail>({
       ...fixtures[index],
       events: events[id] ?? [],

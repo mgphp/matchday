@@ -231,6 +231,47 @@ already supported all of it.
   geometrically accurate positional diagram — there's no left/right or
   precise x/y placement within a row.
 
+### M9 — Match clock ([#31](https://github.com/mgphp/matchday/issues/31))
+
+Before this, a live match's minute was a number the coach typed into
+`EditMatchModal`, and the match centre's 30s poll only refetched that stored
+value — nothing ticked, and closing the app froze the match.
+
+- [x] `MatchPeriod` (`src/lib/types.ts`) — a period name plus `startedAt` and
+      an optional `endedAt`, and `Match.periods?: MatchPeriod[]`. An array
+      rather than a pair of timestamps so half-time is _recorded_ rather than
+      inferred, and so a third period could be appended without a type change.
+- [x] `src/lib/match-clock.ts` — pure derivation, no React:
+  - `elapsedMinutes(periods, now)` sums time inside periods only, so the
+    half-time gap is excluded automatically and a finished match freezes.
+  - `displayMinute(match, now)` prefers the derived clock but falls back to
+    the legacy hand-entered `Match.minute`, so fixtures recorded before this
+    milestone still render. `minute` is kept in the type for exactly that
+    reason and is cleared the moment a match gains periods.
+  - `nextClockAction(match)` returns the single control to offer next
+    (kick-off → half-time → second-half → full-time), and
+    `applyClockAction(match, action, now)` returns the resulting periods and
+    status. Keeping both pure means the screen holds no clock state.
+- [x] `useNow(intervalMs, active)` (`src/lib/use-now.ts`) — re-reads the wall
+      clock on an interval so the minute ticks between polls. Only active
+      while a period is actually running; at half time the clock is stopped,
+      so re-rendering every second would show the same number.
+- [x] Repository: `updateMatchClock(id, { status, periods })` (mock + HTTP).
+      The HTTP implementation sends `minute: null` alongside, so a stale
+      legacy value can't shadow the derived clock.
+- [x] Match centre: one primary clock button (whichever action is next), and
+      a "Half time N′" badge while the clock is stopped between periods so a
+      frozen "LIVE" minute doesn't look like a bug.
+- [x] `EditMatchModal` lost its Minute field (and `MatchScoreUpdate` lost
+      `minute`) — the status chips remain for corrections, but the clock now
+      owns the minute. The modal points at the clock controls instead.
+- [x] Tests: `match-clock` (half-time gaps, finished matches, legacy
+      fallback, out-of-order timestamps, every action transition), `useNow`,
+      both repositories, and the match centre wiring.
+- **Known gap:** no stoppage-time allowance — the clock counts real elapsed
+  time only, so added time has to be handled by when the coach presses the
+  next control.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)
