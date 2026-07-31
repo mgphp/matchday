@@ -24,6 +24,8 @@ export interface MatchScoreUpdate {
   status: MatchStatus;
   homeScore?: number;
   awayScore?: number;
+  /** Full-time length in minutes — drives the fair-share rotation targets. */
+  durationMinutes?: number;
 }
 
 export interface MatchClockUpdate {

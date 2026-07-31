@@ -130,13 +130,29 @@ describe('MatchDetailScreen', () => {
     await findByText('Minutes played');
 
     // m1 has no periods, so the clock falls back to its stored 62nd minute.
-    // p7 came on for p4 at 58, so p4 played 58 and p7 has played 4.
-    expect(getByLabelText('Theo Banks, 58 minutes played, on the bench')).toBeTruthy();
-    expect(getByLabelText('Andrés Vidal, 4 minutes played, on the pitch')).toBeTruthy();
+    // p7 came on for p4 at 58, so p4 played 58 and p7 has played 4. The
+    // target is a 5-player lineup's 90 minutes shared over a squad of 7.
+    expect(
+      getByLabelText('Theo Banks, 58 minutes played of 64 target, on the bench, due off'),
+    ).toBeTruthy();
+    expect(
+      getByLabelText('Andrés Vidal, 4 minutes played of 64 target, on the pitch, due on'),
+    ).toBeTruthy();
     // An ever-present starter has the full 62.
-    expect(getByLabelText('Sam Okafor, 62 minutes played, on the pitch')).toBeTruthy();
+    expect(
+      getByLabelText('Sam Okafor, 62 minutes played of 64 target, on the pitch, due off'),
+    ).toBeTruthy();
     expect(getByText('On pitch')).toBeTruthy();
     expect(getByText('Bench')).toBeTruthy();
+  });
+
+  it('names who is due off next to the substitution control', async () => {
+    const { findByText, getByText } = await renderScreen();
+    await findByText('Minutes played');
+
+    // Sam Okafor started and is still on, so he has the most game time of
+    // anyone on the pitch and is furthest past an even share.
+    expect(getByText(/Due off: Sam Okafor/)).toBeTruthy();
   });
 
   it('omits minutes played before a match kicks off', async () => {

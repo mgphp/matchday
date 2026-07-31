@@ -28,6 +28,7 @@ describe('EditMatchModal', () => {
       status: 'scheduled',
       homeScore: undefined,
       awayScore: undefined,
+      durationMinutes: 90,
     });
   });
 
@@ -73,8 +74,45 @@ describe('EditMatchModal', () => {
       status: 'live',
       homeScore: 1,
       awayScore: 0,
+      durationMinutes: 90,
     });
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('defaults full-time minutes to 90 and submits an edited value', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined);
+    const { getByLabelText, getByText } = await render(
+      <EditMatchModal visible onClose={jest.fn()} match={scheduledMatch} onSubmit={onSubmit} />,
+    );
+
+    const field = getByLabelText('Full-time minutes');
+    expect(field.props.value).toBe('90');
+
+    await userEvent.clear(field);
+    await userEvent.type(field, '50');
+    await userEvent.press(getByText('Save'));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ durationMinutes: 50 }));
+  });
+
+  it('pre-fills full-time minutes from the match and rejects a zero', async () => {
+    const { getByLabelText, getByText } = await render(
+      <EditMatchModal
+        visible
+        onClose={jest.fn()}
+        match={{ ...scheduledMatch, durationMinutes: 60 }}
+        onSubmit={jest.fn()}
+      />,
+    );
+
+    const field = getByLabelText('Full-time minutes');
+    expect(field.props.value).toBe('60');
+
+    await userEvent.clear(field);
+    expect(getByText('Save')).toBeDisabled();
+
+    await userEvent.type(field, '0');
+    expect(getByText('Save')).toBeDisabled();
   });
 
   it('pre-fills the score from an already-live match', async () => {
