@@ -318,8 +318,30 @@ describe('createHttpRepository', () => {
         body: JSON.stringify({
           lineups: { home: ourPlayers, away: awayLineup },
           formation: '2-3-1',
+          availablePlayerIds: null,
         }),
       },
     );
+  });
+
+  it('updateLineup sends availability, and null when set back to everyone', async () => {
+    const respond = () =>
+      jest
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(jsonResponse({ id: 'm1', lineups: { home: [], away: [] } }))
+        .mockResolvedValueOnce(jsonResponse({ id: 'm1' }));
+
+    let fetchMock = respond();
+    const repo = createHttpRepository(options);
+    await repo.updateLineup('m1', { side: 'home', players: [], availablePlayerIds: ['p1'] });
+    let body = JSON.parse(String((fetchMock.mock.calls[1] as [string, RequestInit])[1].body));
+    expect(body.availablePlayerIds).toEqual(['p1']);
+
+    jest.restoreAllMocks();
+    fetchMock = respond();
+    await repo.updateLineup('m1', { side: 'home', players: [] });
+    body = JSON.parse(String((fetchMock.mock.calls[1] as [string, RequestInit])[1].body));
+    // null clears it server-side; undefined would leave a stale list in place.
+    expect(body.availablePlayerIds).toBeNull();
   });
 });

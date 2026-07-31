@@ -32,6 +32,15 @@ const match: MatchDetail = {
   events: [],
 };
 
+type Rendered = Awaited<ReturnType<typeof render>>;
+
+/** Save is disabled on an empty pitch, so put one player on it first. */
+async function assignOnePlayer(screen: Rendered) {
+  const [firstDfSlot] = await screen.findAllByLabelText('Add a DF to this position');
+  await userEvent.press(firstDfSlot);
+  await userEvent.press(screen.getByText('Danny Whitmore'));
+}
+
 describe('EditLineupModal', () => {
   beforeEach(() => {
     mockGetSquad.mockReset();
@@ -204,5 +213,67 @@ describe('EditLineupModal', () => {
     await userEvent.press(getByLabelText('Close'));
 
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('marks a substitute as not available and stores the rest as available', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined);
+    const screen = await render(
+      <EditLineupModal visible onClose={jest.fn()} match={match} side="home" onSubmit={onSubmit} />,
+    );
+    await assignOnePlayer(screen);
+    const { getByText, getByLabelText } = screen;
+
+    await userEvent.press(getByLabelText('9 Jamie Cole, FW, available'));
+    expect(getByLabelText('9 Jamie Cole, FW, not available')).toBeTruthy();
+
+    await userEvent.press(getByText('Save lineup'));
+
+    const update = onSubmit.mock.calls[0][0];
+    expect(update.availablePlayerIds).toBeDefined();
+    expect(update.availablePlayerIds).not.toContain('p5');
+    expect(update.availablePlayerIds).toContain('p1');
+  });
+
+  it('sends no availability at all when everyone is there', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined);
+    const screen = await render(
+      <EditLineupModal visible onClose={jest.fn()} match={match} side="home" onSubmit={onSubmit} />,
+    );
+    await assignOnePlayer(screen);
+
+    await userEvent.press(screen.getByText('Save lineup'));
+
+    // Absent rather than a list naming the whole squad.
+    expect(onSubmit.mock.calls[0][0].availablePlayerIds).toBeUndefined();
+  });
+
+  it('unticking the last missing player drops availability back to everyone', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined);
+    const screen = await render(
+      <EditLineupModal visible onClose={jest.fn()} match={match} side="home" onSubmit={onSubmit} />,
+    );
+    await assignOnePlayer(screen);
+    const { getByText, getByLabelText } = screen;
+
+    await userEvent.press(getByLabelText('9 Jamie Cole, FW, available'));
+    await userEvent.press(getByLabelText('9 Jamie Cole, FW, not available'));
+    await userEvent.press(getByText('Save lineup'));
+
+    expect(onSubmit.mock.calls[0][0].availablePlayerIds).toBeUndefined();
+  });
+
+  it('pre-fills availability from the match', async () => {
+    const { findByText, getByLabelText } = await render(
+      <EditLineupModal
+        visible
+        onClose={jest.fn()}
+        match={{ ...match, availablePlayerIds: ['p1', 'p2', 'p3', 'p4'] }}
+        side="home"
+        onSubmit={jest.fn()}
+      />,
+    );
+    await findByText('Substitutes');
+
+    expect(getByLabelText('9 Jamie Cole, FW, not available')).toBeTruthy();
   });
 });

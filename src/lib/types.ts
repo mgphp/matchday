@@ -45,6 +45,12 @@ export interface Match {
   /** Our team's shape for this match, e.g. "2-3-1". Free text — squad sizes vary (7-, 9-a-side, etc.). */
   formation?: string;
   /**
+   * Squad ids available for this match. Absent means "everyone" — fixtures
+   * recorded before availability existed, and the common case where the whole
+   * squad turns up. Drives the fair-share targets in `src/lib/rotation.ts`.
+   */
+  availablePlayerIds?: string[];
+  /**
    * Full-time length in minutes. Youth football runs shorter than 90, and it
    * varies by age group, so this is per-match rather than a constant. Used to
    * work out a fair share of game time — see `src/lib/rotation.ts`.

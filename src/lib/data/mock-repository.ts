@@ -192,6 +192,9 @@ const lineups: Record<string, Lineups> = {
 /** Our team's formation per match, e.g. "2-3-1". */
 const formations: Record<string, string> = {};
 
+/** Squad ids available per match — absent means the whole squad. */
+const availability: Record<string, string[]> = {};
+
 /** Simulated network latency so loading states are visible in the app. */
 const LATENCY_MS = 300;
 
@@ -211,6 +214,7 @@ export const mockRepository: MatchdayRepository = {
       events: events[id] ?? [],
       lineups: lineups[id],
       formation: formations[id],
+      availablePlayerIds: availability[id],
     });
   },
   getTable: () => respond(table),
@@ -251,6 +255,7 @@ export const mockRepository: MatchdayRepository = {
       events: events[id] ?? [],
       lineups: lineups[id],
       formation: formations[id],
+      availablePlayerIds: availability[id],
     });
   },
   updateMatchClock: (id, update: MatchClockUpdate) => {
@@ -265,6 +270,7 @@ export const mockRepository: MatchdayRepository = {
       events: events[id] ?? [],
       lineups: lineups[id],
       formation: formations[id],
+      availablePlayerIds: availability[id],
     });
   },
   addEvent: (id, event: NewMatchEvent) => {
@@ -279,6 +285,7 @@ export const mockRepository: MatchdayRepository = {
       events: events[id],
       lineups: lineups[id],
       formation: formations[id],
+      availablePlayerIds: availability[id],
     });
   },
   updateLineup: (id, update: LineupUpdate) => {
@@ -287,11 +294,15 @@ export const mockRepository: MatchdayRepository = {
     const current = lineups[id] ?? { home: [], away: [] };
     lineups[id] = { ...current, [update.side]: update.players };
     if (update.formation !== undefined) formations[id] = update.formation;
+    // `undefined` means everyone, so clear rather than store an empty list.
+    if (update.availablePlayerIds === undefined) delete availability[id];
+    else availability[id] = update.availablePlayerIds;
     return respond<MatchDetail>({
       ...match,
       events: events[id] ?? [],
       lineups: lineups[id],
       formation: formations[id],
+      availablePlayerIds: availability[id],
     });
   },
 };

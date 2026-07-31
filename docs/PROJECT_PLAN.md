@@ -406,6 +406,40 @@ had enough, so game time is shared fairly.
   target and shows as permanently "due on". That is the next thing to fix
   here, and probably means an availability step in the lineup editor.
 
+### M13 — Per-match availability ([#39](https://github.com/mgphp/matchday/issues/39))
+
+Closes M12's known gap: "available" meant the whole squad, so anyone who
+didn't turn up still lowered everyone else's target and sat permanently at
+"due on".
+
+- [x] `Match.availablePlayerIds?: string[]` — **absent means everyone**. That
+      covers both fixtures recorded before this existed and the normal week
+      where the whole squad turns up, so a coach never ticks anyone in for a
+      full-strength side. An empty list means nobody, which is different.
+- [x] `src/lib/availability.ts` — `isAvailable`, `availablePlayers`,
+      `unavailablePlayers`. A test asserts the last two partition the squad
+      exactly, since a player appearing in both halves would double-count.
+- [x] Set in `EditLineupModal`'s substitutes list: tap anyone who isn't at the
+      match. **Only bench players are toggleable** — anyone picked to start is
+      available by definition. State is held as the _available_ set rather
+      than the missing one, so it needs no knowledge of the squad until a row
+      is tapped, and unticking the last missing player drops back to
+      `undefined` rather than storing a list naming everybody.
+- [x] Match centre filters unavailable players out **before** `rotation()`
+      runs, so no signature change was needed — the existing
+      `minutes.length` divisor becomes the available count for free. They are
+      listed under a "Not available" heading with no target.
+- [x] `LineupUpdate.availablePlayerIds`, persisted by both repositories. The
+      HTTP one sends `null` to clear, so going back to a full squad actually
+      sticks instead of leaving a stale list.
+- [x] Tests: `availability` (absent vs empty list, partitioning), the modal
+      (mark, unmark, pre-fill, and that a full squad sends nothing), both
+      repositories, and a screen test proving the target moves from 64 to 90
+      minutes when two of seven drop out.
+- **Known gap:** a player added to the squad _after_ availability was set for
+  a match reads as unavailable for it, because they aren't in the stored
+  list. Only affects fixtures already marked up.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)

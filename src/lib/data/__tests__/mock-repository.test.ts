@@ -185,6 +185,23 @@ describe('mockRepository', () => {
     expect(updated.lineups?.away).toEqual(away);
   });
 
+  it('updateLineup stores availability and clears it when set back to everyone', async () => {
+    const withAvailability = await mockRepository.updateLineup('m1', {
+      side: 'home',
+      players: [],
+      availablePlayerIds: ['p1', 'p3'],
+    });
+    expect(withAvailability.availablePlayerIds).toEqual(['p1', 'p3']);
+
+    const cleared = await mockRepository.updateLineup('m1', {
+      side: 'home',
+      players: [],
+      availablePlayerIds: undefined,
+    });
+    // Absent, not an empty list — "everyone" must not read as "nobody".
+    expect(cleared.availablePlayerIds).toBeUndefined();
+  });
+
   it('updateLineup rejects an unknown match id', async () => {
     await expect(
       mockRepository.updateLineup('nope', { side: 'home', players: [] }),
