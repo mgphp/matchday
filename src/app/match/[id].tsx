@@ -12,18 +12,35 @@ import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { StateView } from '@/components/state-view';
 import { repository } from '@/lib/data';
+import {
+  applyClockAction,
+  CLOCK_ACTION_LABELS,
+  displayMinute,
+  nextClockAction,
+  runningPeriod,
+  type ClockAction,
+} from '@/lib/match-clock';
 import { useTeam } from '@/lib/team-context';
 import type { MatchDetail, MatchEvent, Player } from '@/lib/types';
 import { useData } from '@/lib/use-data';
+import { useNow } from '@/lib/use-now';
 import { colors, spacing, typography } from '@/theme/theme';
 
 /** How often a live match refetches in the background. */
 const LIVE_POLL_MS = 30_000;
+/** How often the derived clock re-renders while a period is running. */
+const CLOCK_TICK_MS = 1_000;
 
-function statusBadge(match: MatchDetail) {
+function statusBadge(match: MatchDetail, minute: number, action: ClockAction | undefined) {
   switch (match.status) {
     case 'live':
-      return <Badge label={`LIVE ${match.minute}'`} variant="live" />;
+      // Paused between periods — the clock is stopped, so say so rather than
+      // showing a "LIVE" minute that isn't moving.
+      return action === 'second-half' ? (
+        <Badge label={`Half time ${minute}'`} variant="alert" />
+      ) : (
+        <Badge label={`LIVE ${minute}'`} variant="live" />
+      );
     case 'postponed':
       return <Badge label="Postponed" variant="alert" />;
     case 'finished':
@@ -123,6 +140,22 @@ export default function MatchDetailScreen() {
     return () => clearInterval(timer);
   }, [isLive, refresh]);
 
+  // Only tick while a period is actually running — at half time the clock is
+  // stopped, so re-rendering every second would show the same number.
+  const now = useNow(CLOCK_TICK_MS, runningPeriod(data?.periods) !== undefined);
+  const [isUpdatingClock, setIsUpdatingClock] = useState(false);
+  const clockAction = data ? nextClockAction(data) : undefined;
+  const handleClockAction = async (action: ClockAction) => {
+    if (!data) return;
+    setIsUpdatingClock(true);
+    try {
+      await repository.updateMatchClock(data.id, applyClockAction(data, action, Date.now()));
+      await refresh();
+    } finally {
+      setIsUpdatingClock(false);
+    }
+  };
+
   if (status === 'loading') {
     return (
       <Screen>
@@ -153,7 +186,7 @@ export default function MatchDetailScreen() {
       >
         <Card>
           <View style={styles.headerRow}>
-            {statusBadge(data)}
+            {statusBadge(data, displayMinute(data, now), clockAction)}
             <Text style={styles.competition}>{data.competition}</Text>
           </View>
           <Text style={styles.score}>{scoreline(data)}</Text>
@@ -164,6 +197,13 @@ export default function MatchDetailScreen() {
             </View>
           ) : null}
           <Text style={styles.venue}>{data.venue}</Text>
+          {clockAction ? (
+            <Button
+              label={isUpdatingClock ? 'Saving…' : CLOCK_ACTION_LABELS[clockAction]}
+              onPress={() => handleClockAction(clockAction)}
+              disabled={isUpdatingClock}
+            />
+          ) : null}
           <View style={styles.actionsRow}>
             <Button label="Edit match" variant="secondary" onPress={() => setIsEditing(true)} />
             <Button

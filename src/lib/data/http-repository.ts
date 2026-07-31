@@ -2,6 +2,7 @@ import type { Match, MatchDetail, Player, Standing } from '@/lib/types';
 
 import type {
   LineupUpdate,
+  MatchClockUpdate,
   MatchdayRepository,
   MatchScoreUpdate,
   NewFixtureInput,
@@ -94,6 +95,16 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
       const match = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`, {
         method: 'PATCH',
         body: update,
+      });
+      return withVenue(match);
+    },
+    updateMatchClock: async (id, update: MatchClockUpdate) => {
+      const match = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`, {
+        method: 'PATCH',
+        // `periods` round-trips the same way `venue` and `formation` do — the
+        // API stores and returns fields it doesn't declare. `minute: null`
+        // clears the legacy value so it can't shadow the derived clock.
+        body: { ...update, minute: null },
       });
       return withVenue(match);
     },

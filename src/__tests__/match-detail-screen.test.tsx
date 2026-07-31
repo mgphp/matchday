@@ -2,6 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { render, userEvent } from '@testing-library/react-native';
 
 import MatchDetailScreen from '@/app/match/[id]';
+import { mockRepository } from '@/lib/data/mock-repository';
 import { TeamProvider } from '@/lib/team-context';
 
 jest.mock('expo-router', () => ({
@@ -57,6 +58,45 @@ describe('MatchDetailScreen', () => {
     await findByText('Kings Athletic v Westfield Wanderers');
 
     expect(queryByText(/′/)).toBeNull();
+  });
+
+  it('derives the live minute from the clock once a match kicks off', async () => {
+    // m3 is the seeded postponed fixture; reset it so it behaves as an
+    // un-kicked-off match without disturbing the fixtures the other tests use.
+    await mockRepository.updateMatchScore('m3', { status: 'scheduled' });
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'm3' });
+
+    const { findByText, getByText } = await renderScreen();
+    await findByText('Milltown United v Redbrook County');
+    expect(getByText('Kick-off upcoming')).toBeTruthy();
+
+    await userEvent.press(getByText('Kick off'));
+
+    // Derived from the period we just started, so the clock reads 0 minutes.
+    expect(await findByText("LIVE 0'")).toBeTruthy();
+    expect(getByText('Half time')).toBeTruthy();
+  });
+
+  it('shows a stopped clock and a Second half control at half time', async () => {
+    await mockRepository.updateMatchClock('m3', {
+      status: 'live',
+      periods: [
+        { period: 'first', startedAt: '2026-07-22T15:00:00Z', endedAt: '2026-07-22T15:25:00Z' },
+      ],
+    });
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'm3' });
+
+    const { findByText, getByText } = await renderScreen();
+
+    expect(await findByText("Half time 25'")).toBeTruthy();
+    expect(getByText('Second half')).toBeTruthy();
+  });
+
+  it('falls back to the stored minute for a match with no recorded periods', async () => {
+    const { findByText } = await renderScreen();
+    await findByText('Northgate Rovers 1 – 0 Harbour City');
+
+    expect(await findByText("LIVE 62'")).toBeTruthy();
   });
 
   it('opens the lineup editor from the Edit lineup button', async () => {

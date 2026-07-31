@@ -80,16 +80,28 @@ describe('mockRepository', () => {
       status: 'live',
       homeScore: 1,
       awayScore: 0,
-      minute: 5,
     });
 
-    expect(updated).toMatchObject({ id: 'm2', status: 'live', homeScore: 1, minute: 5 });
+    expect(updated).toMatchObject({ id: 'm2', status: 'live', homeScore: 1, awayScore: 0 });
     // Untouched fields survive the partial update.
     expect(updated.competition).toBe('Premier League');
 
     await expect(mockRepository.updateMatchScore('nope', { status: 'live' })).rejects.toThrow(
       'No match with id nope',
     );
+  });
+
+  it('updateMatchClock stores periods, drops the legacy minute and rejects an unknown id', async () => {
+    const periods = [{ period: 'first' as const, startedAt: '2026-07-20T16:30:00.000Z' }];
+    // m1 is the seeded live fixture carrying a hand-entered `minute`.
+    const updated = await mockRepository.updateMatchClock('m1', { status: 'live', periods });
+
+    expect(updated.periods).toEqual(periods);
+    expect(updated.minute).toBeUndefined();
+
+    await expect(
+      mockRepository.updateMatchClock('nope', { status: 'live', periods }),
+    ).rejects.toThrow('No match with id nope');
   });
 
   it('updatePlayer replaces the matching player in place', async () => {

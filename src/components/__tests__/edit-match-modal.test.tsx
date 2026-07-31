@@ -15,25 +15,23 @@ const scheduledMatch: Match = {
 };
 
 describe('EditMatchModal', () => {
-  it('has no score/minute fields and submits for a scheduled match', async () => {
+  it('has no score fields and submits for a scheduled match', async () => {
     const onSubmit = jest.fn().mockResolvedValue(undefined);
     const { queryByLabelText, getByText } = await render(
       <EditMatchModal visible onClose={jest.fn()} match={scheduledMatch} onSubmit={onSubmit} />,
     );
 
     expect(queryByLabelText('U10')).toBeNull();
-    expect(queryByLabelText('Minute')).toBeNull();
 
     await userEvent.press(getByText('Save'));
     expect(onSubmit).toHaveBeenCalledWith({
       status: 'scheduled',
       homeScore: undefined,
       awayScore: undefined,
-      minute: undefined,
     });
   });
 
-  it('requires scores and a minute once Live is selected', async () => {
+  it('requires both scores once Live is selected', async () => {
     const { getByLabelText, getByText } = await render(
       <EditMatchModal visible onClose={jest.fn()} match={scheduledMatch} onSubmit={jest.fn()} />,
     );
@@ -42,14 +40,24 @@ describe('EditMatchModal', () => {
     expect(getByText('Save')).toBeDisabled();
 
     await userEvent.type(getByLabelText('U10'), '1');
-    await userEvent.type(getByLabelText('RIV'), '0');
     expect(getByText('Save')).toBeDisabled();
 
-    await userEvent.type(getByLabelText('Minute'), '12');
+    await userEvent.type(getByLabelText('RIV'), '0');
     expect(getByText('Save')).not.toBeDisabled();
   });
 
-  it('submits status, scores and minute for a live match', async () => {
+  it('points at the match clock instead of a minute field when Live is selected', async () => {
+    const { getByLabelText, findByText, queryByLabelText } = await render(
+      <EditMatchModal visible onClose={jest.fn()} match={scheduledMatch} onSubmit={jest.fn()} />,
+    );
+
+    await userEvent.press(getByLabelText('Live'));
+
+    expect(queryByLabelText('Minute')).toBeNull();
+    expect(await findByText(/The match minute comes from the clock/)).toBeTruthy();
+  });
+
+  it('submits status and scores for a live match', async () => {
     const onSubmit = jest.fn().mockResolvedValue(undefined);
     const onClose = jest.fn();
     const { getByLabelText, getByText } = await render(
@@ -59,25 +67,23 @@ describe('EditMatchModal', () => {
     await userEvent.press(getByLabelText('Live'));
     await userEvent.type(getByLabelText('U10'), '1');
     await userEvent.type(getByLabelText('RIV'), '0');
-    await userEvent.type(getByLabelText('Minute'), '12');
     await userEvent.press(getByText('Save'));
 
     expect(onSubmit).toHaveBeenCalledWith({
       status: 'live',
       homeScore: 1,
       awayScore: 0,
-      minute: 12,
     });
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('pre-fills score and minute from an already-live match', async () => {
+  it('pre-fills the score from an already-live match', async () => {
     const liveMatch: Match = {
       ...scheduledMatch,
       status: 'live',
       homeScore: 2,
       awayScore: 1,
-      minute: 40,
+      periods: [{ period: 'first', startedAt: '2026-09-05T10:00:00Z' }],
     };
     const { getByLabelText } = await render(
       <EditMatchModal visible onClose={jest.fn()} match={liveMatch} onSubmit={jest.fn()} />,
@@ -85,7 +91,6 @@ describe('EditMatchModal', () => {
 
     expect(getByLabelText('U10').props.value).toBe('2');
     expect(getByLabelText('RIV').props.value).toBe('1');
-    expect(getByLabelText('Minute').props.value).toBe('40');
   });
 
   it('shows an error and stays open when submitting fails', async () => {
