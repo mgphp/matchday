@@ -21,6 +21,7 @@ import {
   runningPeriod,
   type ClockAction,
 } from '@/lib/match-clock';
+import { playerMinutes, type PlayerMinutes } from '@/lib/player-minutes';
 import { useTeam } from '@/lib/team-context';
 import type { MatchDetail, MatchEvent, Player } from '@/lib/types';
 import { useData } from '@/lib/use-data';
@@ -99,6 +100,23 @@ function LineupColumn({
   );
 }
 
+function MinutesRow({ entry }: { entry: PlayerMinutes }) {
+  return (
+    <View
+      accessibilityLabel={`${entry.player.name}, ${entry.minutes} minutes played, ${
+        entry.isOnPitch ? 'on the pitch' : 'on the bench'
+      }`}
+      style={styles.minutesRow}
+    >
+      <Text style={styles.minutesNumber}>{entry.player.squadNumber}</Text>
+      <Text style={[styles.minutesName, !entry.isOnPitch && styles.minutesNameBench]}>
+        {entry.player.name}
+      </Text>
+      <Text style={styles.minutesValue}>{entry.minutes}&#8242;</Text>
+    </View>
+  );
+}
+
 function scoreline(match: MatchDetail) {
   if (match.status === 'scheduled' || match.status === 'postponed') {
     return `${match.home.name} v ${match.away.name}`;
@@ -130,6 +148,8 @@ export default function MatchDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const getMatch = useCallback(() => repository.getMatch(String(id)), [id]);
   const { status, data, reload, refresh, isRefreshing } = useData(getMatch);
+  const getSquad = useCallback(() => repository.getSquad(), []);
+  const { data: squad } = useData(getSquad);
   const ownTeam = useTeam();
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingLineup, setIsEditingLineup] = useState(false);
@@ -183,6 +203,23 @@ export default function MatchDetailScreen() {
   // the lineup editor instead.
   const canSubstitute = data.status === 'live';
 
+  // Minutes only mean something once the match is under way; before kick-off
+  // every player sits on zero, which is just noise.
+  const hasStarted = data.status === 'live' || data.status === 'finished';
+  const ourLineup = data.lineups?.[ownSide];
+  const minutesPlayed =
+    hasStarted && ourLineup && squad
+      ? playerMinutes({
+          starting: ourLineup,
+          events: data.events,
+          side: ownSide,
+          squad,
+          elapsed: minute,
+        })
+      : undefined;
+  const onPitch = minutesPlayed?.filter((entry) => entry.isOnPitch) ?? [];
+  const bench = minutesPlayed?.filter((entry) => !entry.isOnPitch) ?? [];
+
   return (
     <Screen>
       <ScrollView
@@ -227,6 +264,24 @@ export default function MatchDetailScreen() {
             ) : null}
           </View>
         </Card>
+
+        {minutesPlayed ? (
+          <Card>
+            <SectionHeader title="Minutes played" variant="accent" />
+            <Text style={styles.minutesGroupLabel}>On pitch</Text>
+            {onPitch.map((entry) => (
+              <MinutesRow key={entry.player.id} entry={entry} />
+            ))}
+            {bench.length > 0 ? (
+              <>
+                <Text style={styles.minutesGroupLabel}>Bench</Text>
+                {bench.map((entry) => (
+                  <MinutesRow key={entry.player.id} entry={entry} />
+                ))}
+              </>
+            ) : null}
+          </Card>
+        ) : null}
 
         <Card>
           <SectionHeader title="Events" variant="accent" />
@@ -328,6 +383,36 @@ const styles = StyleSheet.create({
   emptyText: {
     ...typography.body,
     color: colors.textSecondary,
+  },
+  minutesGroupLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '700',
+    marginTop: spacing.xs,
+  },
+  minutesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  minutesNumber: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    width: spacing.lg,
+  },
+  minutesName: {
+    ...typography.body,
+    color: colors.text,
+    flex: 1,
+  },
+  minutesNameBench: {
+    color: colors.textSecondary,
+  },
+  minutesValue: {
+    ...typography.body,
+    fontWeight: '600',
+    color: colors.accent,
   },
   eventRow: {
     flexDirection: 'row',
