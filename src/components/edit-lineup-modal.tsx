@@ -179,6 +179,15 @@ export function EditLineupModal({
   const [assignments, setAssignments] = useState<Record<string, Player>>(() =>
     placeByPosition(match.lineups?.[side] ?? [], slots),
   );
+  /**
+   * Squad ids available for this match, or `null` for "everyone" — which is
+   * both the default and what a normal week looks like, so a coach never has
+   * to tick anyone in. Stored as the available set rather than the missing
+   * one so it needs no knowledge of the squad until a row is actually tapped.
+   */
+  const [availableIds, setAvailableIds] = useState<string[] | null>(
+    match.availablePlayerIds ?? null,
+  );
   const [pickerSlot, setPickerSlot] = useState<Slot | null>(null);
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -241,6 +250,24 @@ export function EditLineupModal({
     setPickerSlot(null);
   };
 
+  /**
+   * Marking the first player missing has to materialise the available list
+   * from the squad; unticking the last one drops back to `null` so the match
+   * carries no availability field at all.
+   */
+  const toggleAvailability = (playerId: string) => {
+    setAvailableIds((current) => {
+      const all = (squad ?? []).map((player) => player.id);
+      if (current === null) return all.filter((id) => id !== playerId);
+      if (current.includes(playerId)) {
+        const next = current.filter((id) => id !== playerId);
+        return next;
+      }
+      const next = all.filter((id) => current.includes(id) || id === playerId);
+      return next.length === all.length ? null : next;
+    });
+  };
+
   const handleClose = () => {
     setError(undefined);
     setPickerSlot(null);
@@ -251,7 +278,12 @@ export function EditLineupModal({
     setError(undefined);
     setIsSubmitting(true);
     try {
-      await onSubmit({ side, formation, players: Object.values(assignments) });
+      await onSubmit({
+        side,
+        formation,
+        players: Object.values(assignments),
+        availablePlayerIds: availableIds ?? undefined,
+      });
       onClose();
     } catch {
       setError('Could not save the lineup. Try again.');
@@ -372,11 +404,32 @@ export function EditLineupModal({
                   {substitutes.length === 0 ? (
                     <Text style={styles.emptyText}>Everyone is in the starting lineup.</Text>
                   ) : (
-                    substitutes.map((player) => (
-                      <Text key={player.id} style={styles.subRow}>
-                        {player.squadNumber} {player.name} · {player.position}
+                    <>
+                      <Text style={styles.subsHint}>
+                        Tap anyone who isn&#8217;t at this match — they won&#8217;t count towards
+                        each player&#8217;s share of game time.
                       </Text>
-                    ))
+                      {substitutes.map((player) => {
+                        const missing = availableIds !== null && !availableIds.includes(player.id);
+                        return (
+                          <Pressable
+                            key={player.id}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: !missing }}
+                            accessibilityLabel={`${player.squadNumber} ${player.name}, ${player.position}, ${
+                              missing ? 'not available' : 'available'
+                            }`}
+                            onPress={() => toggleAvailability(player.id)}
+                            style={styles.subRowPressable}
+                          >
+                            <Text style={[styles.subRow, missing && styles.subRowUnavailable]}>
+                              {player.squadNumber} {player.name} · {player.position}
+                            </Text>
+                            {missing ? <Text style={styles.subRowTag}>not available</Text> : null}
+                          </Pressable>
+                        );
+                      })}
+                    </>
                   )}
                 </View>
               )}
@@ -538,6 +591,26 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
     paddingVertical: spacing.xs / 2,
+    flex: 1,
+  },
+  subsHint: {
+    ...typography.caption,
+    color: colors.textDisabled,
+    paddingBottom: spacing.xs,
+  },
+  subRowPressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 44,
+  },
+  subRowUnavailable: {
+    color: colors.textDisabled,
+    textDecorationLine: 'line-through',
+  },
+  subRowTag: {
+    ...typography.caption,
+    color: colors.alert,
   },
   emptyText: {
     ...typography.body,

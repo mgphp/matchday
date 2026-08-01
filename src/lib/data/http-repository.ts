@@ -149,9 +149,12 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
       const match = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`, {
         method: 'PATCH',
         // `formation` round-trips the same way `venue` does — see withVenue above.
+        // `availablePlayerIds: null` clears it, so unticking everyone back to
+        // "whole squad available" actually sticks rather than leaving a stale list.
         body: {
           lineups,
           ...(update.formation !== undefined ? { formation: update.formation } : {}),
+          availablePlayerIds: update.availablePlayerIds ?? null,
         },
       });
       return withVenue(match);

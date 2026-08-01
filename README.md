@@ -24,7 +24,11 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
 - **Minutes played** — once a match is under way, the match centre lists the
   squad split into on-pitch and bench with live minutes per player, derived
   from the lineup, the substitutions and the clock (`src/lib/player-minutes.ts`)
-- **Rotation helper** — each player gets an even share of the available game
+- **Availability** — mark anyone missing in the lineup editor's substitutes
+  list. They drop out of the rotation targets, so a short-handed squad still
+  gets a fair split; absent means the whole squad is available
+  (`src/lib/availability.ts`)
+- **Rotation helper** — each available player gets an even share of the game
   time as a target, and is flagged "due on" (teal) or "due off" (amber) when
   they drift off it. A "Due off … · Due on …" hint sits next to the
   Substitution button. Set the match length with "Full-time minutes" in

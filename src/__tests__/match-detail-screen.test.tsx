@@ -155,6 +155,25 @@ describe('MatchDetailScreen', () => {
     expect(getByText(/Due off: Sam Okafor/)).toBeTruthy();
   });
 
+  it('excludes unavailable players from the targets and lists them separately', async () => {
+    // A 5-player lineup over a 7-player squad targets 64 minutes each; drop
+    // two players out and the same game time is shared over 5, so 90 each.
+    await mockRepository.updateLineup('m1', {
+      side: 'home',
+      players: (await mockRepository.getMatch('m1')).lineups?.home ?? [],
+      availablePlayerIds: ['p1', 'p2', 'p3', 'p4', 'p5'],
+    });
+
+    const { findByText, getByLabelText, getByText } = await renderScreen();
+    await findByText('Minutes played');
+
+    expect(getByText('Not available')).toBeTruthy();
+    expect(getByLabelText('Jamie Cole, not available for this match')).toBeTruthy();
+    expect(
+      getByLabelText('Sam Okafor, 62 minutes played of 90 target, on the pitch, on track'),
+    ).toBeTruthy();
+  });
+
   it('omits minutes played before a match kicks off', async () => {
     jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'm2' });
 

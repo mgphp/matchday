@@ -21,6 +21,7 @@ import {
   runningPeriod,
   type ClockAction,
 } from '@/lib/match-clock';
+import { isAvailable } from '@/lib/availability';
 import { playerMinutes } from '@/lib/player-minutes';
 import {
   DEFAULT_DURATION_MINUTES,
@@ -240,9 +241,13 @@ export default function MatchDetailScreen() {
           elapsed: minute,
         })
       : undefined;
-  const rotationEntries = minutesPlayed
+  // Anyone not at this match is excluded before targets are worked out, so a
+  // missing player doesn't drag everyone else's share down.
+  const availableMinutes = minutesPlayed?.filter((entry) => isAvailable(data, entry.player.id));
+  const missing = minutesPlayed?.filter((entry) => !isAvailable(data, entry.player.id)) ?? [];
+  const rotationEntries = availableMinutes
     ? rotation({
-        minutes: minutesPlayed,
+        minutes: availableMinutes,
         onPitchCount: ourLineup?.length ?? 0,
         duration: data.durationMinutes ?? DEFAULT_DURATION_MINUTES,
         elapsed: minute,
@@ -317,6 +322,23 @@ export default function MatchDetailScreen() {
                 <Text style={styles.minutesGroupLabel}>Bench</Text>
                 {bench.map((entry) => (
                   <MinutesRow key={entry.player.id} entry={entry} />
+                ))}
+              </>
+            ) : null}
+            {missing.length > 0 ? (
+              <>
+                <Text style={styles.minutesGroupLabel}>Not available</Text>
+                {missing.map((entry) => (
+                  <View
+                    key={entry.player.id}
+                    accessibilityLabel={`${entry.player.name}, not available for this match`}
+                    style={styles.minutesRow}
+                  >
+                    <Text style={styles.minutesNumber}>{entry.player.squadNumber}</Text>
+                    <Text style={[styles.minutesName, styles.minutesNameUnavailable]}>
+                      {entry.player.name}
+                    </Text>
+                  </View>
                 ))}
               </>
             ) : null}
@@ -448,6 +470,10 @@ const styles = StyleSheet.create({
   },
   minutesNameBench: {
     color: colors.textSecondary,
+  },
+  minutesNameUnavailable: {
+    color: colors.textDisabled,
+    textDecorationLine: 'line-through',
   },
   minutesValue: {
     ...typography.body,

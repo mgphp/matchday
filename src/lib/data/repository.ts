@@ -39,6 +39,11 @@ export interface LineupUpdate {
   side: 'home' | 'away';
   formation?: string;
   players: Player[];
+  /**
+   * Squad ids available for this match, or `undefined` for "everyone".
+   * Set alongside the lineup because that is when a coach knows who turned up.
+   */
+  availablePlayerIds?: string[];
 }
 
 /**
