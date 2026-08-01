@@ -7,7 +7,8 @@ import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { TextField } from '@/components/text-field';
 import type { NewFixtureInput } from '@/lib/data/repository';
-import type { Team } from '@/lib/types';
+import { describeFixture, findClashingFixture } from '@/lib/fixture-clash';
+import type { Match, Team } from '@/lib/types';
 import { colors, typography } from '@/theme/theme';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -24,11 +25,14 @@ export function AddFixtureModal({
   visible,
   onClose,
   ownTeam,
+  existingFixtures = [],
   onSubmit,
 }: {
   visible: boolean;
   onClose: () => void;
   ownTeam: Team;
+  /** Fixtures already in the diary, used to warn about a clashing kickoff. */
+  existingFixtures?: Match[];
   onSubmit: (input: NewFixtureInput) => Promise<void>;
 }) {
   const [opponentName, setOpponentName] = useState('');
@@ -48,6 +52,13 @@ export function AddFixtureModal({
     DATE_PATTERN.test(date) &&
     TIME_PATTERN.test(time) &&
     side !== null;
+
+  // Advisory only — the coach knows their own diary better than this rule
+  // does, so a clash never disables Add.
+  const clash =
+    DATE_PATTERN.test(date) && TIME_PATTERN.test(time)
+      ? findClashingFixture(existingFixtures, `${date}T${time}:00Z`)
+      : undefined;
 
   const reset = () => {
     setOpponentName('');
@@ -135,6 +146,12 @@ export function AddFixtureModal({
           placeholder="10:00"
         />
         <TextField label="Ground (optional)" value={venue} onChangeText={setVenue} />
+        {clash ? (
+          <Text style={styles.warning}>
+            You already have a fixture around then — {describeFixture(clash, ownTeam.id)}. Add it
+            anyway if that&#8217;s right.
+          </Text>
+        ) : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Button
           label={isSubmitting ? 'Adding…' : 'Add'}
@@ -155,6 +172,10 @@ const styles = StyleSheet.create({
   close: {
     ...typography.body,
     color: colors.accent,
+  },
+  warning: {
+    ...typography.caption,
+    color: colors.alert,
   },
   error: {
     ...typography.caption,

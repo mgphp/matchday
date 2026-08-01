@@ -1,8 +1,30 @@
 import { render, userEvent } from '@testing-library/react-native';
 
+import type { Match } from '@/lib/types';
+
 import { AddFixtureModal } from '../add-fixture-modal';
 
 const ownTeam = { id: 'team-1', name: 'Under 10 Bears', shortName: 'U10' };
+
+const existingFixture: Match = {
+  id: 'm1',
+  competition: 'League',
+  kickoff: '2026-09-05T10:00:00Z',
+  venue: 'Bear Pit',
+  status: 'scheduled',
+  home: ownTeam,
+  away: { id: 'opp-9', name: 'Harbour City', shortName: 'HBC' },
+};
+
+type Rendered = Awaited<ReturnType<typeof render>>;
+
+/** Fills everything except the kickoff, which each clash test sets itself. */
+async function fillFixture({ getByLabelText }: Rendered) {
+  await userEvent.press(getByLabelText('Home'));
+  await userEvent.type(getByLabelText('Opponent'), 'Rivals FC');
+  await userEvent.type(getByLabelText('Opponent short name (e.g. HBC)'), 'riv');
+  await userEvent.type(getByLabelText('Competition'), 'League Cup');
+}
 
 describe('AddFixtureModal', () => {
   it('disables submit until every field is set', async () => {
@@ -98,5 +120,62 @@ describe('AddFixtureModal', () => {
     await userEvent.press(getByLabelText('Close'));
 
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('warns about a clashing kickoff without blocking the save', async () => {
+    const screen = await render(
+      <AddFixtureModal
+        visible
+        onClose={jest.fn()}
+        ownTeam={ownTeam}
+        existingFixtures={[existingFixture]}
+        onSubmit={jest.fn()}
+      />,
+    );
+
+    await fillFixture(screen);
+    await userEvent.type(screen.getByLabelText('Date (YYYY-MM-DD)'), '2026-09-05');
+    await userEvent.type(screen.getByLabelText('Kick-off time (HH:MM)'), '10:30');
+
+    expect(await screen.findByText(/You already have a fixture around then/)).toBeTruthy();
+    expect(screen.getByText(/Harbour City at 10:00/)).toBeTruthy();
+    // Advisory only.
+    expect(screen.getByText('Add')).not.toBeDisabled();
+  });
+
+  it('says nothing when the slot is free', async () => {
+    const screen = await render(
+      <AddFixtureModal
+        visible
+        onClose={jest.fn()}
+        ownTeam={ownTeam}
+        existingFixtures={[existingFixture]}
+        onSubmit={jest.fn()}
+      />,
+    );
+
+    await fillFixture(screen);
+    await userEvent.type(screen.getByLabelText('Date (YYYY-MM-DD)'), '2026-09-05');
+    await userEvent.type(screen.getByLabelText('Kick-off time (HH:MM)'), '14:00');
+
+    expect(screen.queryByText(/You already have a fixture around then/)).toBeNull();
+  });
+
+  it('says nothing while the kickoff is still half-typed', async () => {
+    const screen = await render(
+      <AddFixtureModal
+        visible
+        onClose={jest.fn()}
+        ownTeam={ownTeam}
+        existingFixtures={[existingFixture]}
+        onSubmit={jest.fn()}
+      />,
+    );
+
+    await fillFixture(screen);
+    await userEvent.type(screen.getByLabelText('Date (YYYY-MM-DD)'), '2026-09-05');
+    await userEvent.type(screen.getByLabelText('Kick-off time (HH:MM)'), '10');
+
+    expect(screen.queryByText(/You already have a fixture around then/)).toBeNull();
   });
 });
