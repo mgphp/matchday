@@ -44,6 +44,12 @@ export interface Match {
   minute?: number;
   /** Our team's shape for this match, e.g. "2-3-1". Free text — squad sizes vary (7-, 9-a-side, etc.). */
   formation?: string;
+  /**
+   * Full-time length in minutes. Youth football runs shorter than 90, and it
+   * varies by age group, so this is per-match rather than a constant. Used to
+   * work out a fair share of game time — see `src/lib/rotation.ts`.
+   */
+  durationMinutes?: number;
 }
 
 export interface Standing {
@@ -76,6 +82,17 @@ export interface MatchEvent {
   side: 'home' | 'away';
   /** e.g. assist or player coming off */
   detail?: string;
+  /**
+   * Squad id of `player`, when they are one of ours. Display uses `player`;
+   * anything that has to reason about *which* player (who is on the pitch,
+   * minutes played) needs this, because names aren't stable identifiers.
+   */
+  playerId?: string;
+  /**
+   * Squad id of the other player involved — for a substitution, the one going
+   * off. Named generically so a goal could later record its assister here.
+   */
+  relatedPlayerId?: string;
 }
 
 export interface Lineups {

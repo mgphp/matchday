@@ -11,6 +11,7 @@ import { EditMatchModal } from '@/components/edit-match-modal';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { StateView } from '@/components/state-view';
+import { SubstitutionModal } from '@/components/substitution-modal';
 import { repository } from '@/lib/data';
 import {
   applyClockAction,
@@ -20,6 +21,14 @@ import {
   runningPeriod,
   type ClockAction,
 } from '@/lib/match-clock';
+import { playerMinutes } from '@/lib/player-minutes';
+import {
+  DEFAULT_DURATION_MINUTES,
+  dueOff,
+  dueOn,
+  rotation,
+  type RotationEntry,
+} from '@/lib/rotation';
 import { useTeam } from '@/lib/team-context';
 import type { MatchDetail, MatchEvent, Player } from '@/lib/types';
 import { useData } from '@/lib/use-data';
@@ -98,6 +107,39 @@ function LineupColumn({
   );
 }
 
+const ROTATION_LABELS: Record<RotationEntry['status'], string> = {
+  under: 'due on',
+  'on-track': 'on track',
+  over: 'due off',
+};
+
+function MinutesRow({ entry }: { entry: RotationEntry }) {
+  return (
+    <View
+      accessibilityLabel={`${entry.player.name}, ${entry.minutes} minutes played of ${
+        entry.target
+      } target, ${entry.isOnPitch ? 'on the pitch' : 'on the bench'}, ${
+        ROTATION_LABELS[entry.status]
+      }`}
+      style={styles.minutesRow}
+    >
+      <Text style={styles.minutesNumber}>{entry.player.squadNumber}</Text>
+      <Text style={[styles.minutesName, !entry.isOnPitch && styles.minutesNameBench]}>
+        {entry.player.name}
+      </Text>
+      {entry.status !== 'on-track' ? (
+        <Text style={entry.status === 'under' ? styles.rotationUnder : styles.rotationOver}>
+          {ROTATION_LABELS[entry.status]}
+        </Text>
+      ) : null}
+      <Text style={styles.minutesValue}>
+        {entry.minutes}
+        <Text style={styles.minutesTarget}>/{entry.target}&#8242;</Text>
+      </Text>
+    </View>
+  );
+}
+
 function scoreline(match: MatchDetail) {
   if (match.status === 'scheduled' || match.status === 'postponed') {
     return `${match.home.name} v ${match.away.name}`;
@@ -129,9 +171,12 @@ export default function MatchDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const getMatch = useCallback(() => repository.getMatch(String(id)), [id]);
   const { status, data, reload, refresh, isRefreshing } = useData(getMatch);
+  const getSquad = useCallback(() => repository.getSquad(), []);
+  const { data: squad } = useData(getSquad);
   const ownTeam = useTeam();
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingLineup, setIsEditingLineup] = useState(false);
+  const [isSubstituting, setIsSubstituting] = useState(false);
 
   const isLive = data?.status === 'live';
   useEffect(() => {
@@ -175,6 +220,38 @@ export default function MatchDetailScreen() {
   const homeScorers = scorersFor(data.events, 'home');
   const awayScorers = scorersFor(data.events, 'away');
   const ownSide = data.home.id === ownTeam.id ? 'home' : 'away';
+  const minute = displayMinute(data, now);
+  // Only offer a substitution once the match has actually started — before
+  // kick-off "who is on the pitch" is just the starting lineup, edited via
+  // the lineup editor instead.
+  const canSubstitute = data.status === 'live';
+
+  // Minutes only mean something once the match is under way; before kick-off
+  // every player sits on zero, which is just noise.
+  const hasStarted = data.status === 'live' || data.status === 'finished';
+  const ourLineup = data.lineups?.[ownSide];
+  const minutesPlayed =
+    hasStarted && ourLineup && squad
+      ? playerMinutes({
+          starting: ourLineup,
+          events: data.events,
+          side: ownSide,
+          squad,
+          elapsed: minute,
+        })
+      : undefined;
+  const rotationEntries = minutesPlayed
+    ? rotation({
+        minutes: minutesPlayed,
+        onPitchCount: ourLineup?.length ?? 0,
+        duration: data.durationMinutes ?? DEFAULT_DURATION_MINUTES,
+        elapsed: minute,
+      })
+    : undefined;
+  const onPitch = rotationEntries?.filter((entry) => entry.isOnPitch) ?? [];
+  const bench = rotationEntries?.filter((entry) => !entry.isOnPitch) ?? [];
+  const nextOn = rotationEntries ? dueOn(rotationEntries) : undefined;
+  const nextOff = rotationEntries ? dueOff(rotationEntries) : undefined;
 
   return (
     <Screen>
@@ -186,7 +263,7 @@ export default function MatchDetailScreen() {
       >
         <Card>
           <View style={styles.headerRow}>
-            {statusBadge(data, displayMinute(data, now), clockAction)}
+            {statusBadge(data, minute, clockAction)}
             <Text style={styles.competition}>{data.competition}</Text>
           </View>
           <Text style={styles.score}>{scoreline(data)}</Text>
@@ -211,8 +288,40 @@ export default function MatchDetailScreen() {
               variant="secondary"
               onPress={() => setIsEditingLineup(true)}
             />
+            {canSubstitute ? (
+              <Button
+                label="Substitution"
+                variant="secondary"
+                onPress={() => setIsSubstituting(true)}
+              />
+            ) : null}
           </View>
+          {canSubstitute && (nextOn || nextOff) ? (
+            <Text style={styles.rotationHint}>
+              {nextOff ? `Due off: ${nextOff.player.name}` : null}
+              {nextOff && nextOn ? ' · ' : null}
+              {nextOn ? `Due on: ${nextOn.player.name}` : null}
+            </Text>
+          ) : null}
         </Card>
+
+        {minutesPlayed ? (
+          <Card>
+            <SectionHeader title="Minutes played" variant="accent" />
+            <Text style={styles.minutesGroupLabel}>On pitch</Text>
+            {onPitch.map((entry) => (
+              <MinutesRow key={entry.player.id} entry={entry} />
+            ))}
+            {bench.length > 0 ? (
+              <>
+                <Text style={styles.minutesGroupLabel}>Bench</Text>
+                {bench.map((entry) => (
+                  <MinutesRow key={entry.player.id} entry={entry} />
+                ))}
+              </>
+            ) : null}
+          </Card>
+        ) : null}
 
         <Card>
           <SectionHeader title="Events" variant="accent" />
@@ -262,6 +371,17 @@ export default function MatchDetailScreen() {
           await refresh();
         }}
       />
+      <SubstitutionModal
+        visible={isSubstituting}
+        onClose={() => setIsSubstituting(false)}
+        match={data}
+        side={ownSide}
+        minute={minute}
+        onSubmit={async (event) => {
+          await repository.addEvent(data.id, event);
+          await refresh();
+        }}
+      />
     </Screen>
   );
 }
@@ -302,6 +422,55 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...typography.body,
+    color: colors.textSecondary,
+  },
+  minutesGroupLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '700',
+    marginTop: spacing.xs,
+  },
+  minutesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  minutesNumber: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    width: spacing.lg,
+  },
+  minutesName: {
+    ...typography.body,
+    color: colors.text,
+    flex: 1,
+  },
+  minutesNameBench: {
+    color: colors.textSecondary,
+  },
+  minutesValue: {
+    ...typography.body,
+    fontWeight: '600',
+    color: colors.accent,
+  },
+  minutesTarget: {
+    ...typography.caption,
+    fontWeight: '400',
+    color: colors.textDisabled,
+  },
+  rotationUnder: {
+    ...typography.caption,
+    fontWeight: '600',
+    color: colors.accent,
+  },
+  rotationOver: {
+    ...typography.caption,
+    fontWeight: '600',
+    color: colors.alert,
+  },
+  rotationHint: {
+    ...typography.caption,
     color: colors.textSecondary,
   },
   eventRow: {

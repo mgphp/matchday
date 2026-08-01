@@ -7,6 +7,7 @@ import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { TextField } from '@/components/text-field';
 import type { MatchScoreUpdate } from '@/lib/data/repository';
+import { DEFAULT_DURATION_MINUTES } from '@/lib/rotation';
 import type { Match, MatchStatus } from '@/lib/types';
 import { colors, spacing, typography } from '@/theme/theme';
 
@@ -36,20 +37,28 @@ export function EditMatchModal({
   const [status, setStatus] = useState<MatchStatus>(match.status);
   const [homeScore, setHomeScore] = useState(match.homeScore?.toString() ?? '');
   const [awayScore, setAwayScore] = useState(match.awayScore?.toString() ?? '');
+  const [duration, setDuration] = useState(
+    (match.durationMinutes ?? DEFAULT_DURATION_MINUTES).toString(),
+  );
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const parsedHome = Number(homeScore);
   const parsedAway = Number(awayScore);
+  const parsedDuration = Number(duration);
+
+  const isValidDuration =
+    duration.length > 0 && Number.isInteger(parsedDuration) && parsedDuration > 0;
 
   const isComplete =
-    !hasScore(status) ||
-    (Number.isInteger(parsedHome) &&
-      parsedHome >= 0 &&
-      homeScore.length > 0 &&
-      Number.isInteger(parsedAway) &&
-      parsedAway >= 0 &&
-      awayScore.length > 0);
+    isValidDuration &&
+    (!hasScore(status) ||
+      (Number.isInteger(parsedHome) &&
+        parsedHome >= 0 &&
+        homeScore.length > 0 &&
+        Number.isInteger(parsedAway) &&
+        parsedAway >= 0 &&
+        awayScore.length > 0));
 
   const handleClose = () => {
     setError(undefined);
@@ -64,6 +73,7 @@ export function EditMatchModal({
         status,
         homeScore: hasScore(status) ? parsedHome : undefined,
         awayScore: hasScore(status) ? parsedAway : undefined,
+        durationMinutes: parsedDuration,
       });
       onClose();
     } catch {
@@ -114,6 +124,15 @@ export function EditMatchModal({
             </View>
           </View>
         ) : null}
+        <TextField
+          label="Full-time minutes"
+          value={duration}
+          onChangeText={setDuration}
+          keyboardType="number-pad"
+        />
+        <Text style={styles.hint}>
+          Used to work out each player&#8217;s fair share of game time.
+        </Text>
         {status === 'live' ? (
           <Text style={styles.hint}>
             The match minute comes from the clock — use Kick off / Half time / Full time on the

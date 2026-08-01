@@ -25,11 +25,12 @@ describe('MatchDetailScreen', () => {
   });
 
   it('renders score, events and lineups for a live match', async () => {
-    const { findByText, getByText } = await renderScreen();
+    const { findByText, getByText, getAllByText } = await renderScreen();
     expect(await findByText('Northgate Rovers 1 – 0 Harbour City')).toBeTruthy();
     expect(getByText("LIVE 62'")).toBeTruthy();
     expect(getByText('Northgate Park')).toBeTruthy();
-    expect(getByText('Jamie Cole')).toBeTruthy();
+    // Once in the events timeline, once in the minutes-played list.
+    expect(getAllByText('Jamie Cole').length).toBeGreaterThan(0);
     expect(getByText('assist Ryo Tanaka')).toBeTruthy();
     expect(getByText('13 Felix Ndiaye')).toBeTruthy();
   });
@@ -97,6 +98,70 @@ describe('MatchDetailScreen', () => {
     await findByText('Northgate Rovers 1 – 0 Harbour City');
 
     expect(await findByText("LIVE 62'")).toBeTruthy();
+  });
+
+  it('hides the Substitution control for a match that is not live', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'm2' });
+
+    const { findByText, queryByText } = await renderScreen();
+    await findByText('Kings Athletic v Westfield Wanderers');
+
+    expect(queryByText('Substitution')).toBeNull();
+  });
+
+  it('records a substitution onto the timeline', async () => {
+    const { findByText, getByText, getByLabelText } = await renderScreen();
+    await findByText('Northgate Rovers 1 – 0 Harbour City');
+
+    await userEvent.press(getByText('Substitution'));
+    await findByText('Coming off');
+
+    // p7 already came on for p4 in the seeded events, so the pitch holds
+    // p1/p2/p3/p7/p5 and the bench holds p4 and p6.
+    await userEvent.press(getByLabelText('Take off 10 Ryo Tanaka, MF'));
+    await userEvent.press(getByLabelText('Bring on 9 Jamie Cole, FW'));
+    await userEvent.press(getByText('Record substitution'));
+
+    expect(await findByText('for Ryo Tanaka')).toBeTruthy();
+  });
+
+  it('shows minutes played, split between the pitch and the bench', async () => {
+    const { findByText, getByLabelText, getByText } = await renderScreen();
+    await findByText('Minutes played');
+
+    // m1 has no periods, so the clock falls back to its stored 62nd minute.
+    // p7 came on for p4 at 58, so p4 played 58 and p7 has played 4. The
+    // target is a 5-player lineup's 90 minutes shared over a squad of 7.
+    expect(
+      getByLabelText('Theo Banks, 58 minutes played of 64 target, on the bench, due off'),
+    ).toBeTruthy();
+    expect(
+      getByLabelText('Andrés Vidal, 4 minutes played of 64 target, on the pitch, due on'),
+    ).toBeTruthy();
+    // An ever-present starter has the full 62.
+    expect(
+      getByLabelText('Sam Okafor, 62 minutes played of 64 target, on the pitch, due off'),
+    ).toBeTruthy();
+    expect(getByText('On pitch')).toBeTruthy();
+    expect(getByText('Bench')).toBeTruthy();
+  });
+
+  it('names who is due off next to the substitution control', async () => {
+    const { findByText, getByText } = await renderScreen();
+    await findByText('Minutes played');
+
+    // Sam Okafor started and is still on, so he has the most game time of
+    // anyone on the pitch and is furthest past an even share.
+    expect(getByText(/Due off: Sam Okafor/)).toBeTruthy();
+  });
+
+  it('omits minutes played before a match kicks off', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'm2' });
+
+    const { findByText, queryByText } = await renderScreen();
+    await findByText('Kings Athletic v Westfield Wanderers');
+
+    expect(queryByText('Minutes played')).toBeNull();
   });
 
   it('opens the lineup editor from the Edit lineup button', async () => {
