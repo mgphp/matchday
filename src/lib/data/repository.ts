@@ -57,6 +57,14 @@ export interface MatchdayRepository {
   updatePlayer(player: Player): Promise<Player>;
   /** Removes a player from the squad. */
   removePlayer(id: string): Promise<void>;
+  /**
+   * Puts a removed player back, keeping their original id.
+   *
+   * Distinct from `addPlayer`, which mints a new id: undoing a removal has to
+   * restore the same identity, or match events referencing `playerId` would
+   * point at a player who no longer exists.
+   */
+  restorePlayer(player: Player): Promise<Player>;
   /** Creates a new fixture (id generated) and returns the full match detail. */
   createMatch(input: NewFixtureInput): Promise<MatchDetail>;
   /** Updates a match's score/status/minute. Rejects when no match exists for the id. */

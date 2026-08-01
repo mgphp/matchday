@@ -15,6 +15,7 @@ export const repository: MatchdayRepository = {
   addPlayer: (...args) => activeRepository.addPlayer(...args),
   updatePlayer: (...args) => activeRepository.updatePlayer(...args),
   removePlayer: (...args) => activeRepository.removePlayer(...args),
+  restorePlayer: (...args) => activeRepository.restorePlayer(...args),
   createMatch: (...args) => activeRepository.createMatch(...args),
   updateMatchScore: (...args) => activeRepository.updateMatchScore(...args),
   updateMatchClock: (...args) => activeRepository.updateMatchClock(...args),

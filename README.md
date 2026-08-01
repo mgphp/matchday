@@ -10,7 +10,8 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
   coach's own team, warning (but not blocking) if a kickoff lands within two
   hours of a fixture already in the diary
 - **Squad** — players grouped under GK/DF/MF/FW section headers; "Add player"
-  and tapping a row to edit or remove them
+  and tapping a row to edit or remove them. A removal can be undone from a
+  banner for 8 seconds, restoring the player's original id
 - **Table** — full league standings with promotion/relegation zone
   highlighting; implemented but currently hidden from the tab bar pending
   further polish (`src/app/(tabs)/table.tsx`)

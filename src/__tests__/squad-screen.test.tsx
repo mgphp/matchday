@@ -12,6 +12,7 @@ jest.mock('@/lib/data', () => ({
     addPlayer: jest.fn(),
     updatePlayer: jest.fn(),
     removePlayer: jest.fn(),
+    restorePlayer: jest.fn(),
   },
 }));
 
@@ -19,6 +20,7 @@ const mockGetSquad = jest.mocked(repository.getSquad);
 const mockAddPlayer = jest.mocked(repository.addPlayer);
 const mockUpdatePlayer = jest.mocked(repository.updatePlayer);
 const mockRemovePlayer = jest.mocked(repository.removePlayer);
+const mockRestorePlayer = jest.mocked(repository.restorePlayer);
 
 describe('SquadScreen', () => {
   beforeEach(() => {
@@ -26,6 +28,7 @@ describe('SquadScreen', () => {
     mockAddPlayer.mockClear();
     mockUpdatePlayer.mockClear();
     mockRemovePlayer.mockClear();
+    mockRestorePlayer.mockClear();
   });
 
   it('groups players under position headers and omits empty sections', async () => {
@@ -98,5 +101,37 @@ describe('SquadScreen', () => {
 
     expect(mockRemovePlayer).toHaveBeenCalledWith('p1');
     expect(mockGetSquad).toHaveBeenCalledTimes(2);
+  });
+
+  it('offers an undo after removing a player, restoring the same id', async () => {
+    mockRemovePlayer.mockResolvedValue(undefined);
+    mockRestorePlayer.mockImplementation(async (player) => player);
+    const { findByLabelText, findByText, getByText, getByLabelText } = await render(
+      <SquadScreen />,
+    );
+
+    await userEvent.press(await findByLabelText('Number 1, Test Keeper, Goalkeeper'));
+    await userEvent.press(getByText('Remove player'));
+    await userEvent.press(getByText('Tap again to confirm removal'));
+
+    expect(await findByText('Removed Test Keeper')).toBeTruthy();
+
+    await userEvent.press(getByLabelText('Undo'));
+
+    // The original id comes back, not a freshly minted one.
+    expect(mockRestorePlayer).toHaveBeenCalledWith({
+      id: 'p1',
+      name: 'Test Keeper',
+      position: 'GK',
+      squadNumber: 1,
+    });
+    expect(mockAddPlayer).not.toHaveBeenCalled();
+  });
+
+  it('has no undo banner until something is removed', async () => {
+    const { findByLabelText, queryByLabelText } = await render(<SquadScreen />);
+    await findByLabelText('Number 1, Test Keeper, Goalkeeper');
+
+    expect(queryByLabelText('Undo')).toBeNull();
   });
 });
