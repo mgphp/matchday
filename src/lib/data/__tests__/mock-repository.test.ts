@@ -104,6 +104,28 @@ describe('mockRepository', () => {
     ).rejects.toThrow('No match with id nope');
   });
 
+  it('addEvent appends to the timeline in minute order and rejects an unknown id', async () => {
+    const before = (await mockRepository.getMatch('m4')).events.length;
+    const updated = await mockRepository.addEvent('m4', {
+      minute: 20,
+      type: 'goal',
+      side: 'away',
+      player: 'Jamie Cole',
+      playerId: 'p6',
+    });
+
+    expect(updated.events).toHaveLength(before + 1);
+    // Recorded out of order (existing events start at 12, 27, …) but sorted in.
+    expect(updated.events.map((event) => event.minute)).toEqual(
+      [...updated.events.map((event) => event.minute)].sort((a, b) => a - b),
+    );
+    expect(updated.events.find((event) => event.minute === 20)?.playerId).toBe('p6');
+
+    await expect(
+      mockRepository.addEvent('nope', { minute: 1, type: 'goal', side: 'home', player: 'X' }),
+    ).rejects.toThrow('No match with id nope');
+  });
+
   it('updatePlayer replaces the matching player in place', async () => {
     const updated = await mockRepository.updatePlayer({
       id: 'p2',

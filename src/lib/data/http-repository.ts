@@ -6,6 +6,7 @@ import type {
   MatchdayRepository,
   MatchScoreUpdate,
   NewFixtureInput,
+  NewMatchEvent,
 } from './repository';
 
 interface HttpRepositoryOptions {
@@ -40,6 +41,11 @@ function withVenue<T extends { venue?: string }>(match: T): T & { venue: string 
 /** Not cryptographically unique — fine for a client-generated squad entry id. */
 function generatePlayerId(): string {
   return `p-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** Same tradeoff as generatePlayerId — a single coach records these. */
+function generateEventId(): string {
+  return `e-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }
 
 /** MatchdayRepository backed by the real matchday-api, scoped to one team. */
@@ -115,6 +121,20 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
         // API stores and returns fields it doesn't declare. `minute: null`
         // clears the legacy value so it can't shadow the derived clock.
         body: { ...update, minute: null },
+      });
+      return withVenue(match);
+    },
+    addEvent: async (id, event: NewMatchEvent) => {
+      // Same shape as updateLineup: the API's PATCH replaces `events` rather
+      // than appending, so read the current timeline first. No dedicated
+      // event endpoint is needed.
+      const current = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`);
+      const events = [...(current.events ?? []), { ...event, id: generateEventId() }].sort(
+        (a, b) => a.minute - b.minute,
+      );
+      const match = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`, {
+        method: 'PATCH',
+        body: { events },
       });
       return withVenue(match);
     },

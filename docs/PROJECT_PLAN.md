@@ -231,6 +231,26 @@ already supported all of it.
   geometrically accurate positional diagram — there's no left/right or
   precise x/y placement within a row.
 
+### M7.1 — Clashing kickoff warning ([#28](https://github.com/mgphp/matchday/issues/28))
+
+Closes an M7 known gap: nothing stopped a coach adding two fixtures in the
+same slot.
+
+- [x] `src/lib/fixture-clash.ts` — `findClashingFixture` returns an existing
+      fixture within `CLASH_WINDOW_MINUTES` (2 hours) of a proposed kickoff.
+      Postponed fixtures are skipped (they aren't being played), and an
+      `ignoreMatchId` option keeps a future "edit fixture" flow from clashing
+      with itself.
+- [x] `AddFixtureModal` takes `existingFixtures` and shows an amber warning
+      naming the clash. **Advisory only — Add is never disabled.** Tournaments
+      and double-headers are real, and a coach knows their own diary better
+      than a two-hour rule does.
+- [x] Tests: window boundaries on both sides, postponed fixtures, unparseable
+      dates, self-ignore, plus the modal warning appearing/not appearing and
+      leaving Add enabled.
+- **Known gap:** the check is client-side only. Two devices adding the same
+  slot at once would both succeed — fine for a single-coach team.
+
 ### M7.2 — Undo a player removal ([#29](https://github.com/mgphp/matchday/issues/29))
 
 Closes the other M7 known gap: removal was guarded by a confirming tap, but
@@ -294,6 +314,97 @@ value — nothing ticked, and closing the app froze the match.
 - **Known gap:** no stoppage-time allowance — the clock counts real elapsed
   time only, so added time has to be handled by when the coach presses the
   next control.
+
+### M10 — Substitutions ([#32](https://github.com/mgphp/matchday/issues/32))
+
+`MatchEvent` already had a `'substitution'` type and the match centre rendered
+it, but events were read-only seed data — a coach could not record a sub.
+
+- [x] `MatchEvent.playerId` / `relatedPlayerId` (`src/lib/types.ts`) — optional
+      squad ids alongside the existing display strings. Display keeps using
+      `player`/`detail`; anything reasoning about _which_ player needs ids,
+      because names are not stable identifiers. `relatedPlayerId` is named
+      generically so a goal can later record its assister the same way.
+- [x] `src/lib/lineup-state.ts` — `playersOnPitch` applies substitutions to the
+      starting lineup in **minute order** (not array order, since a coach can
+      record one late), keeping the substitute in the slot the outgoing player
+      vacated. `playersOnBench` is the complement. Substitutions recorded
+      without ids are ignored rather than name-matched: guessing would
+      silently corrupt the result.
+- [x] Repository: `addEvent(id, event)` (mock + HTTP), keeping the timeline
+      minute-sorted. The HTTP implementation is read-modify-write against the
+      existing `PATCH`, exactly like `updateLineup` — **no new matchday-api
+      endpoint was needed**, contrary to what the issue assumed.
+- [x] `SubstitutionModal` — "Coming off" lists the pitch, "Coming on" lists the
+      bench, minute pre-filled from the clock but editable. Rows in the two
+      lists carry "Take off …" / "Bring on …" accessibility labels, since they
+      are otherwise indistinguishable to a screen reader.
+- [x] Match centre: a "Substitution" button, shown only while the match is
+      live (before kick-off, the lineup editor is the right tool).
+- [x] Tests: `lineup-state` (out-of-order subs, sub-on-then-off, unknown
+      player, opponent's subs, id-less legacy events), `SubstitutionModal`,
+      both repositories, and the match centre wiring.
+- **Known gap:** no way to edit or delete a recorded event — a mistyped minute
+  has to be lived with.
+
+### M11 — Minutes played ([#33](https://github.com/mgphp/matchday/issues/33))
+
+With the clock (M9) and substitutions (M10) in place, playing time is a
+derivation rather than something to track by hand.
+
+- [x] `src/lib/player-minutes.ts` — `playerMinutes` takes the starting lineup,
+      the events, our side, the squad and the elapsed minutes, and returns
+      every squad player with minutes and an on-pitch flag, in squad order.
+  - Works entirely in **match-minute space**, so half time needs no special
+    handling: `elapsed` already excludes the gap and substitution minutes are
+    match minutes too.
+  - A substitution minute typed ahead of the clock is clamped to `elapsed`,
+    so a fat-fingered "70" during the 50th minute can't credit unplayed time.
+  - Handles a player coming on, going off and coming back on — each spell is
+    accumulated separately.
+  - A starter missing from the squad list (stale squad fetch) is still
+    reported rather than silently dropped.
+- [x] Match centre "Minutes played" card, split into "On pitch" and "Bench",
+      ticking live off the same clock. Shown only once a match is live or
+      finished — before kick-off everyone is on zero, which is just noise.
+      Rows carry a descriptive `accessibilityLabel` ("… 58 minutes played, on
+      the bench").
+- [x] Tests: 12 cases over the derivation (spells, out-of-order events,
+      future minutes, opponent's subs, frozen full time) plus the screen
+      wiring.
+- **Known gap:** per-match only. Season totals per player would be a natural
+  follow-up but need results aggregated across fixtures.
+
+### M12 — Rotation helper ([#34](https://github.com/mgphp/matchday/issues/34))
+
+The point of M9–M11: during a match, show who needs bringing on and who has
+had enough, so game time is shared fairly.
+
+- [x] `Match.durationMinutes?: number` — full-time length, edited via a
+      "Full-time minutes" field in `EditMatchModal` (default 90). Per-match
+      rather than a constant because youth football runs shorter than 90 and
+      varies by age group.
+- [x] `src/lib/rotation.ts`:
+  - `target` = an even split of the total playing time on offer
+    (`duration x lineup size / squad size`).
+  - `expected` = the same figure pro-rata to the clock, capped at `duration`
+    so stoppage time doesn't keep inflating what a player is owed.
+  - `status` is `under` / `on-track` / `over` against `expected`, with a
+    ±3 minute tolerance — without it the whole squad flickers amber between
+    every substitution.
+  - `dueOn` / `dueOff` pick the single most useful name in each direction
+    (least-played on the bench who is behind; most-played on the pitch who is
+    ahead), which is what a coach actually needs mid-match.
+- [x] Match centre: minutes rows show `played/target` with a teal "due on" or
+      amber "due off" tag, and a "Due off … · Due on …" hint sits next to the
+      Substitution button. Accessibility labels carry the target and status
+      too.
+- [x] Tests: 12 cases over targets, tolerance boundaries, the full-time cap,
+      empty squads and both pickers, plus the modal and screen wiring.
+- **Known gap:** "available" means the whole squad — there is no per-match
+  availability, so a player who isn't at the game still lowers everyone's
+  target and shows as permanently "due on". That is the next thing to fix
+  here, and probably means an availability step in the lineup editor.
 
 ## Definition of done (every milestone)
 
