@@ -292,7 +292,8 @@ export const mockRepository: MatchdayRepository = {
     const match = fixtures.find((fixture) => fixture.id === id);
     if (!match) return Promise.reject(new Error(`No match with id ${id}`));
     const current = lineups[id] ?? { home: [], away: [] };
-    lineups[id] = { ...current, [update.side]: update.players };
+    const slotsKey = update.side === 'home' ? 'homeSlots' : 'awaySlots';
+    lineups[id] = { ...current, [update.side]: update.players, [slotsKey]: update.slots };
     if (update.formation !== undefined) formations[id] = update.formation;
     // `undefined` means everyone, so clear rather than store an empty list.
     if (update.availablePlayerIds === undefined) delete availability[id];

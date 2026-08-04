@@ -213,23 +213,27 @@ already supported all of it.
     clear it.
   - **Substitutes** are computed, not picked: whichever squad players aren't
     currently in a pitch slot.
-  - **No positional metadata is stored** — reopening the editor re-places
-    the saved starting XI into slots by matching each player's squad
-    `position` to a slot of the same group (defenders are interchangeable
-    within the back line, so slot identity within a group doesn't need to
-    survive a save/reload round trip). Changing team size or formation
-    re-runs the same placement over whoever's currently assigned, so
-    tweaking the shape doesn't lose the squad selection.
+  - **Slot assignments are stored** — `LineupUpdate.slots` (a slot id →
+    squad id map alongside `players`, `Lineups.homeSlots`/`awaySlots` on
+    read) persists exactly which slot each player was in, so a lineup
+    assigned out of tap order reopens unchanged instead of being re-placed.
+    A lineup with no slot map (saved before this landed) still falls back to
+    `placeByPosition`, matching each player's squad `position` to a slot of
+    the same group. Changing team size or formation re-runs that same
+    fallback placement over whoever's currently assigned — slot ids are
+    formation-derived, so the old ones don't carry across a shape change
+    anyway — which is enough to not lose the squad selection.
   - Wired to a new "Edit lineup" button on the match centre, next to
     "Edit match".
 - [x] Match centre shows the formation next to whichever lineup column is
       ours (`data.home.id === ownTeam.id`, via `useTeam()`).
 - [x] Tests: `updateLineup` (mock + HTTP), `EditLineupModal` (formation/team
       size steppers, position-restricted picker, assign/clear, pre-fill from
-      an existing lineup), and match centre wiring.
+      an existing lineup, slot-order round trip), and match centre wiring.
 - **Known gap:** the pitch is schematic (rows of circles), not a
   geometrically accurate positional diagram — there's no left/right or
-  precise x/y placement within a row.
+  precise x/y placement within a row ([#43](https://github.com/mgphp/matchday/issues/43),
+  blocked on this milestone's slot persistence landing).
 
 ### M7.1 — Clashing kickoff warning ([#28](https://github.com/mgphp/matchday/issues/28))
 

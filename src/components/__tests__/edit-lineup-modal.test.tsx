@@ -184,8 +184,70 @@ describe('EditLineupModal', () => {
       side: 'home',
       formation: '2-2-2',
       players: [squad[1]],
+      slots: { 'DF-0': 'p2' },
     });
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('restores slot assignments exactly, even when the saved order does not match slot order', async () => {
+    // Object.values(assignments) follows tap order, not slot order, so a
+    // lineup assigned out of order saves with Luca (DF-1) ahead of Danny
+    // (DF-0). Without homeSlots, placeByPosition would put Luca back in
+    // DF-0 — the bug this guards against.
+    const withLineup: MatchDetail = {
+      ...match,
+      formation: '2-2-2',
+      lineups: {
+        home: [squad[2], squad[1]],
+        away: [],
+        homeSlots: { 'DF-0': 'p2', 'DF-1': 'p3' },
+      },
+    };
+    const onSubmit = jest.fn().mockResolvedValue(undefined);
+    const { findByLabelText, getByText } = await render(
+      <EditLineupModal
+        visible
+        onClose={jest.fn()}
+        match={withLineup}
+        side="home"
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await findByLabelText("Change Danny Whitmore's position");
+    await userEvent.press(getByText('Save lineup'));
+
+    expect(onSubmit.mock.calls[0][0].slots).toEqual({ 'DF-0': 'p2', 'DF-1': 'p3' });
+  });
+
+  it('re-places by position when changing team size, discarding stale slot ids', async () => {
+    const withLineup: MatchDetail = {
+      ...match,
+      formation: '2-2-2',
+      lineups: {
+        home: [squad[1], squad[2]],
+        away: [],
+        homeSlots: { 'DF-0': 'p2', 'DF-1': 'p3' },
+      },
+    };
+    const { findByText, getByLabelText, findByLabelText } = await render(
+      <EditLineupModal
+        visible
+        onClose={jest.fn()}
+        match={withLineup}
+        side="home"
+        onSubmit={jest.fn()}
+      />,
+    );
+    await findByText('2-2-2');
+
+    await userEvent.press(getByLabelText('More players'));
+    await findByText('8');
+
+    // Both players are still on the pitch after the reflow, not bumped to
+    // the substitutes bench.
+    expect(await findByLabelText("Change Danny Whitmore's position")).toBeTruthy();
+    expect(getByLabelText("Change Luca Marchetti's position")).toBeTruthy();
   });
 
   it('shows an error and stays open when saving fails', async () => {

@@ -75,6 +75,29 @@ function placeByPosition(players: Player[], slots: Slot[]): Record<string, Playe
   return assignments;
 }
 
+/**
+ * Restores the exact slot a saved lineup used, rather than re-deriving one.
+ * `slotMap` is keyed by the same ids `buildSlots` produces, so this only
+ * finds anything when the formation hasn't changed since the save — the
+ * caller falls back to `placeByPosition` otherwise (undefined `slotMap`, or a
+ * player id it names no longer exists).
+ */
+function placeBySlots(
+  players: Player[],
+  slotMap: Record<string, string> | undefined,
+  slots: Slot[],
+): Record<string, Player> | null {
+  if (!slotMap) return null;
+  const byId = new Map(players.map((player) => [player.id, player]));
+  const assignments: Record<string, Player> = {};
+  for (const slot of slots) {
+    const playerId = slotMap[slot.id];
+    const player = playerId !== undefined ? byId.get(playerId) : undefined;
+    if (player) assignments[slot.id] = player;
+  }
+  return Object.keys(assignments).length === players.length ? assignments : null;
+}
+
 const GROUP_ORDER: Group[] = ['FW', 'MF', 'DF', 'GK'];
 
 function PitchSlot({
@@ -176,9 +199,11 @@ export function EditLineupModal({
   const formation = formationOptions[formationIndex] ?? mostBalanced(formationOptions);
   const slots = useMemo(() => buildSlots(formation), [formation]);
 
-  const [assignments, setAssignments] = useState<Record<string, Player>>(() =>
-    placeByPosition(match.lineups?.[side] ?? [], slots),
-  );
+  const [assignments, setAssignments] = useState<Record<string, Player>>(() => {
+    const players = match.lineups?.[side] ?? [];
+    const slotMap = match.lineups?.[side === 'home' ? 'homeSlots' : 'awaySlots'];
+    return placeBySlots(players, slotMap, slots) ?? placeByPosition(players, slots);
+  });
   /**
    * Squad ids available for this match, or `null` for "everyone" — which is
    * both the default and what a normal week looks like, so a coach never has
@@ -282,6 +307,9 @@ export function EditLineupModal({
         side,
         formation,
         players: Object.values(assignments),
+        slots: Object.fromEntries(
+          Object.entries(assignments).map(([slotId, player]) => [slotId, player.id]),
+        ),
         availablePlayerIds: availableIds ?? undefined,
       });
       onClose();
