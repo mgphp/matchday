@@ -104,6 +104,14 @@ export interface MatchEvent {
 export interface Lineups {
   home: Player[];
   away: Player[];
+  /**
+   * Pitch slot id (e.g. `DF-0`) to squad id, for each side that has one.
+   * Absent on a lineup saved before slot persistence existed, or on a side
+   * with no lineup yet — `home`/`away` alone still open sensibly via
+   * `placeByPosition` in that case.
+   */
+  homeSlots?: Record<string, string>;
+  awaySlots?: Record<string, string>;
 }
 
 export interface MatchDetail extends Match {

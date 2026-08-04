@@ -178,11 +178,14 @@ describe('mockRepository', () => {
       side: 'home',
       formation: '2-3-1',
       players: homeSquad,
+      slots: { 'GK-0': 'p1' },
     });
 
     expect(updated.formation).toBe('2-3-1');
     expect(updated.lineups?.home).toEqual(homeSquad);
     expect(updated.lineups?.away).toEqual(away);
+    expect(updated.lineups?.homeSlots).toEqual({ 'GK-0': 'p1' });
+    expect(updated.lineups?.awaySlots).toBeUndefined();
   });
 
   it('updateLineup stores availability and clears it when set back to everyone', async () => {

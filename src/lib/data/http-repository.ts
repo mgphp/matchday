@@ -142,13 +142,16 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
       // The API replaces the whole `lineups` object on PATCH (no deep merge),
       // so read the current match first to keep the other side untouched.
       const current = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`);
+      const slotsKey = update.side === 'home' ? 'homeSlots' : 'awaySlots';
       const lineups = {
         ...(current.lineups ?? { home: [], away: [] }),
         [update.side]: update.players,
+        [slotsKey]: update.slots,
       };
       const match = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`, {
         method: 'PATCH',
         // `formation` round-trips the same way `venue` does — see withVenue above.
+        // `homeSlots`/`awaySlots` round-trip the same way, as undeclared fields.
         // `availablePlayerIds: null` clears it, so unticking everyone back to
         // "whole squad available" actually sticks rather than leaving a stale list.
         body: {

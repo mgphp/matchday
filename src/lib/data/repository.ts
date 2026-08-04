@@ -40,6 +40,13 @@ export interface LineupUpdate {
   formation?: string;
   players: Player[];
   /**
+   * Pitch slot id to squad id, so a saved lineup reopens in the same slots
+   * rather than being re-placed by `placeByPosition`. Keyed by the ids
+   * `buildSlots` derives from `formation`, so it stays meaningful as long as
+   * the formation string is unchanged.
+   */
+  slots?: Record<string, string>;
+  /**
    * Squad ids available for this match, or `undefined` for "everyone".
    * Set alongside the lineup because that is when a coach knows who turned up.
    */

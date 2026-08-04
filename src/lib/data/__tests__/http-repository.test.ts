@@ -324,6 +324,31 @@ describe('createHttpRepository', () => {
     );
   });
 
+  it('updateLineup sends the slot map alongside the players, keyed to the side', async () => {
+    const ourPlayers: Player[] = [{ id: 'p1', name: 'Sam Okafor', position: 'GK', squadNumber: 1 }];
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ id: 'm1', lineups: { home: [], away: [] } }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          id: 'm1',
+          lineups: { home: ourPlayers, away: [], homeSlots: { 'GK-0': 'p1' } },
+        }),
+      );
+
+    const repo = createHttpRepository(options);
+    await repo.updateLineup('m1', {
+      side: 'home',
+      players: ourPlayers,
+      slots: { 'GK-0': 'p1' },
+    });
+
+    const [, patch] = fetchMock.mock.calls[1] as [string, RequestInit];
+    const body = JSON.parse(String(patch.body));
+    expect(body.lineups.homeSlots).toEqual({ 'GK-0': 'p1' });
+    expect(body.lineups.awaySlots).toBeUndefined();
+  });
+
   it('updateLineup sends availability, and null when set back to everyone', async () => {
     const respond = () =>
       jest
