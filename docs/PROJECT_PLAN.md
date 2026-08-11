@@ -232,8 +232,28 @@ already supported all of it.
       an existing lineup, slot-order round trip), and match centre wiring.
 - **Known gap:** the pitch is schematic (rows of circles), not a
   geometrically accurate positional diagram — there's no left/right or
-  precise x/y placement within a row ([#43](https://github.com/mgphp/matchday/issues/43),
-  blocked on this milestone's slot persistence landing).
+  precise x/y placement within a row. Closed by
+  [#43](https://github.com/mgphp/matchday/issues/43) (M8.1).
+
+### M8.1 — Positional pitch slots ([#43](https://github.com/mgphp/matchday/issues/43))
+
+Closes the M8 known gap, now that M8's slot persistence ([#30](https://github.com/mgphp/matchday/issues/30))
+has landed to make a slot's position meaningful across a save/reload.
+
+- [x] `Slot` gains `lane: number` — a normalised horizontal position (0 = left
+      touchline, 1 = right touchline) computed by `laneFor(index, count)`,
+      which spreads `count` slots evenly with margin at each touchline. Works
+      for any positive count, so a 1-defender row and a 5-defender row both
+      lay out correctly across every DF-MF-FW split from 5- to 11-a-side.
+  - GK is fixed at the centre (`lane: 0.5`); outfield slots get a lane in
+    tap-index order, so `DF-0` is consistently the leftmost defender.
+- [x] `pitchRow` switched from flexbox `space-evenly` to absolute positioning:
+      each slot sits at `left: ${lane * 100}%` with a fixed `translateX` to
+      centre it on that point. Lane is purely visual — the position picker
+      still restricts by `slot.group` only, not by lane.
+- [x] Tests: `laneFor`/`buildSlots` across a range of team sizes and
+      formations (1-slot rows centre, multi-slot rows spread left-to-right
+      in index order, lanes stay within the touchlines).
 
 ### M7.1 — Clashing kickoff warning ([#28](https://github.com/mgphp/matchday/issues/28))
 
