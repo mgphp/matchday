@@ -7,6 +7,7 @@ import { SectionHeader } from '@/components/section-header';
 import { StateView } from '@/components/state-view';
 import { repository } from '@/lib/data';
 import type { LineupUpdate } from '@/lib/data/repository';
+import { buildSlots, type Group, type Slot } from '@/lib/pitch-slots';
 import type { MatchDetail, Player } from '@/lib/types';
 import { colors, radii, spacing, typography } from '@/theme/theme';
 
@@ -17,13 +18,6 @@ const DEFAULT_TEAM_SIZE = 7;
 /** Pitch background — deliberately a real grass green, not a theme token. */
 const PITCH_GREEN = '#1e5631';
 const PITCH_LINE = 'rgba(255,255,255,0.35)';
-
-type Group = 'GK' | 'DF' | 'MF' | 'FW';
-
-interface Slot {
-  id: string;
-  group: Group;
-}
 
 /** Every way to split `outfield` players into 3 positive groups (DF-MF-FW). */
 function formationsFor(outfield: number): string[] {
@@ -47,15 +41,6 @@ function mostBalanced(options: string[]): string {
     const parts = (formation: string) => formation.split('-').map(Number);
     return variance(parts(option)) < variance(parts(best)) ? option : best;
   }, options[0]);
-}
-
-function buildSlots(formation: string): Slot[] {
-  const [df, mf, fw] = formation.split('-').map(Number);
-  const slots: Slot[] = [{ id: 'GK-0', group: 'GK' }];
-  for (let i = 0; i < df; i++) slots.push({ id: `DF-${i}`, group: 'DF' });
-  for (let i = 0; i < mf; i++) slots.push({ id: `MF-${i}`, group: 'MF' });
-  for (let i = 0; i < fw; i++) slots.push({ id: `FW-${i}`, group: 'FW' });
-  return slots;
 }
 
 /**
@@ -377,12 +362,16 @@ export function EditLineupModal({
                     {slots
                       .filter((slot) => slot.group === group)
                       .map((slot) => (
-                        <PitchSlot
+                        <View
                           key={slot.id}
-                          group={group}
-                          player={assignments[slot.id]}
-                          onPress={() => setPickerSlot(slot)}
-                        />
+                          style={[styles.slotLane, { left: `${slot.lane * 100}%` }]}
+                        >
+                          <PitchSlot
+                            group={group}
+                            player={assignments[slot.id]}
+                            onPress={() => setPickerSlot(slot)}
+                          />
+                        </View>
                       ))}
                   </View>
                 ))}
@@ -550,8 +539,12 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
   },
   pitchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
+    height: 44,
+  },
+  slotLane: {
+    position: 'absolute',
+    top: 0,
+    transform: [{ translateX: -22 }],
   },
   slot: {
     width: 44,
