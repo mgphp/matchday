@@ -64,6 +64,33 @@ describe('EditLineupModal', () => {
     expect(getByText('Save lineup')).toBeDisabled();
   });
 
+  it('draws the half-pitch markings behind the slots', async () => {
+    const { findByTestId, getByTestId } = await render(
+      <EditLineupModal
+        visible
+        onClose={jest.fn()}
+        match={match}
+        side="home"
+        onSubmit={jest.fn()}
+      />,
+    );
+
+    expect(await findByTestId('pitch-markings')).toBeTruthy();
+    for (const id of [
+      'pitch-stripes',
+      'pitch-halfway-line',
+      'pitch-centre-circle',
+      'pitch-penalty-area',
+      'pitch-goal-area',
+      'pitch-penalty-arc',
+      'pitch-goal-frame',
+      'pitch-corner-arc-left',
+      'pitch-corner-arc-right',
+    ]) {
+      expect(getByTestId(id)).toBeTruthy();
+    }
+  });
+
   it('restricts the position picker to players in that position', async () => {
     const { findAllByLabelText, getByText, queryByText } = await render(
       <EditLineupModal
