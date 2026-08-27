@@ -15,9 +15,13 @@ const MIN_TEAM_SIZE = 5;
 const MAX_TEAM_SIZE = 11;
 const DEFAULT_TEAM_SIZE = 7;
 
-/** Pitch background — deliberately a real grass green, not a theme token. */
+/** Pitch colours — deliberately real grass/paint, not theme tokens. */
 const PITCH_GREEN = '#1e5631';
-const PITCH_LINE = 'rgba(255,255,255,0.35)';
+const PITCH_STRIPE = '#1a4b2b';
+const PITCH_LINE = 'rgba(255,255,255,0.5)';
+const PITCH_LINE_WIDTH = 2;
+/** Portrait half-pitch: full width, a little taller — room for four slot rows. */
+const PITCH_ASPECT_RATIO = 0.82;
 
 /** Every way to split `outfield` players into 3 positive groups (DF-MF-FW). */
 function formationsFor(outfield: number): string[] {
@@ -84,6 +88,35 @@ function placeBySlots(
 }
 
 const GROUP_ORDER: Group[] = ['FW', 'MF', 'DF', 'GK'];
+
+/**
+ * The line markings of a defensive half, drawn with plain Views: our goal is
+ * at the bottom, the halfway line across the top. Arcs are half/quarter
+ * circles made with one rounded, one-sided-open border rather than SVG or
+ * clip-path (neither is available here). Purely decorative — it sits behind
+ * the tappable slots and carries no interaction.
+ */
+function PitchMarkings() {
+  return (
+    <View style={styles.markings} pointerEvents="none" testID="pitch-markings">
+      <View style={styles.stripes} testID="pitch-stripes">
+        {Array.from({ length: 6 }, (_, i) => (
+          <View key={i} style={[styles.stripe, i % 2 === 1 && styles.stripeAlt]} />
+        ))}
+      </View>
+      <View style={styles.halfwayLine} testID="pitch-halfway-line" />
+      <View style={styles.centreCircle} testID="pitch-centre-circle" />
+      <View style={styles.centreSpot} />
+      <View style={styles.penaltyArea} testID="pitch-penalty-area" />
+      <View style={styles.goalArea} testID="pitch-goal-area" />
+      <View style={styles.penaltyArc} testID="pitch-penalty-arc" />
+      <View style={styles.penaltySpot} />
+      <View style={styles.goalFrame} testID="pitch-goal-frame" />
+      <View style={[styles.cornerArc, styles.cornerArcLeft]} testID="pitch-corner-arc-left" />
+      <View style={[styles.cornerArc, styles.cornerArcRight]} testID="pitch-corner-arc-right" />
+    </View>
+  );
+}
 
 function PitchSlot({
   group,
@@ -355,26 +388,27 @@ export function EditLineupModal({
           ) : (
             <>
               <View style={styles.pitch}>
-                <View style={styles.halfwayLine} />
-                <View style={styles.goalBox} />
-                {GROUP_ORDER.map((group) => (
-                  <View key={group} style={styles.pitchRow}>
-                    {slots
-                      .filter((slot) => slot.group === group)
-                      .map((slot) => (
-                        <View
-                          key={slot.id}
-                          style={[styles.slotLane, { left: `${slot.lane * 100}%` }]}
-                        >
-                          <PitchSlot
-                            group={group}
-                            player={assignments[slot.id]}
-                            onPress={() => setPickerSlot(slot)}
-                          />
-                        </View>
-                      ))}
-                  </View>
-                ))}
+                <PitchMarkings />
+                <View style={styles.pitchRows}>
+                  {GROUP_ORDER.map((group) => (
+                    <View key={group} style={styles.pitchRow}>
+                      {slots
+                        .filter((slot) => slot.group === group)
+                        .map((slot) => (
+                          <View
+                            key={slot.id}
+                            style={[styles.slotLane, { left: `${slot.lane * 100}%` }]}
+                          >
+                            <PitchSlot
+                              group={group}
+                              player={assignments[slot.id]}
+                              onPress={() => setPickerSlot(slot)}
+                            />
+                          </View>
+                        ))}
+                    </View>
+                  ))}
+                </View>
               </View>
 
               {pickerSlot ? (
@@ -515,28 +549,142 @@ const styles = StyleSheet.create({
   pitch: {
     borderRadius: radii.lg,
     backgroundColor: PITCH_GREEN,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.sm,
-    gap: spacing.lg,
+    borderWidth: PITCH_LINE_WIDTH,
+    borderColor: PITCH_LINE,
+    aspectRatio: PITCH_ASPECT_RATIO,
     overflow: 'hidden',
+  },
+  markings: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  stripes: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  stripe: {
+    flex: 1,
+    backgroundColor: PITCH_GREEN,
+  },
+  stripeAlt: {
+    backgroundColor: PITCH_STRIPE,
   },
   halfwayLine: {
     position: 'absolute',
-    left: spacing.sm,
-    right: spacing.sm,
-    top: '55%',
-    height: StyleSheet.hairlineWidth,
+    left: 0,
+    right: 0,
+    top: 0,
+    height: PITCH_LINE_WIDTH,
     backgroundColor: PITCH_LINE,
   },
-  goalBox: {
+  centreCircle: {
     position: 'absolute',
-    bottom: spacing.sm,
+    top: 0,
     left: '30%',
-    right: '30%',
-    height: 40,
-    borderWidth: StyleSheet.hairlineWidth,
+    width: '40%',
+    aspectRatio: 2,
     borderColor: PITCH_LINE,
-    borderRadius: radii.sm,
+    borderWidth: PITCH_LINE_WIDTH,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: radii.full,
+    borderBottomRightRadius: radii.full,
+  },
+  centreSpot: {
+    position: 'absolute',
+    top: -3,
+    left: '50%',
+    width: 6,
+    height: 6,
+    marginLeft: -3,
+    borderRadius: radii.full,
+    backgroundColor: PITCH_LINE,
+  },
+  penaltyArea: {
+    position: 'absolute',
+    bottom: 0,
+    left: '20%',
+    width: '60%',
+    height: '34%',
+    borderColor: PITCH_LINE,
+    borderWidth: PITCH_LINE_WIDTH,
+    borderBottomWidth: 0,
+  },
+  goalArea: {
+    position: 'absolute',
+    bottom: 0,
+    left: '36%',
+    width: '28%',
+    height: '14%',
+    borderColor: PITCH_LINE,
+    borderWidth: PITCH_LINE_WIDTH,
+    borderBottomWidth: 0,
+  },
+  penaltyArc: {
+    position: 'absolute',
+    bottom: '34%',
+    left: '38%',
+    width: '24%',
+    aspectRatio: 2,
+    borderColor: PITCH_LINE,
+    borderWidth: PITCH_LINE_WIDTH,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: radii.full,
+    borderTopRightRadius: radii.full,
+  },
+  penaltySpot: {
+    position: 'absolute',
+    bottom: '24%',
+    left: '50%',
+    width: 5,
+    height: 5,
+    marginLeft: -2.5,
+    borderRadius: radii.full,
+    backgroundColor: PITCH_LINE,
+  },
+  goalFrame: {
+    position: 'absolute',
+    bottom: 0,
+    left: '42%',
+    width: '16%',
+    height: 6,
+    borderColor: PITCH_LINE,
+    borderWidth: PITCH_LINE_WIDTH,
+    borderBottomWidth: 0,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  cornerArc: {
+    position: 'absolute',
+    bottom: 0,
+    width: '7%',
+    aspectRatio: 1,
+    borderColor: PITCH_LINE,
+  },
+  cornerArcLeft: {
+    left: 0,
+    borderTopWidth: PITCH_LINE_WIDTH,
+    borderRightWidth: PITCH_LINE_WIDTH,
+    borderTopRightRadius: radii.full,
+  },
+  cornerArcRight: {
+    right: 0,
+    borderTopWidth: PITCH_LINE_WIDTH,
+    borderLeftWidth: PITCH_LINE_WIDTH,
+    borderTopLeftRadius: radii.full,
+  },
+  pitchRows: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'space-evenly',
+    paddingVertical: spacing.md,
   },
   pitchRow: {
     height: 44,

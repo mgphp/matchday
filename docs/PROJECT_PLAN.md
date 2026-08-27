@@ -255,6 +255,27 @@ has landed to make a slot's position meaningful across a save/reload.
       formations (1-slot rows centre, multi-slot rows spread left-to-right
       in index order, lanes stay within the touchlines).
 
+### M8.2 — Realistic half-pitch markings ([#47](https://github.com/mgphp/matchday/issues/47))
+
+Cosmetic pass on the lineup editor: the pitch was a plain green rectangle with
+a hairline halfway line and one centred box. It now reads as a defensive half —
+our goal at the bottom, halfway line at the top.
+
+- [x] `PitchMarkings` (same file as `EditLineupModal`) draws stripes, halfway
+      line, centre-circle arc + spot, penalty area, goal area, penalty arc
+      ("the D"), penalty spot, goal frame and two corner arcs — all plain
+      `View`s. Arcs are half/quarter circles made with a rounded,
+      one-side-open border (no SVG or `clip-path` in RN).
+- [x] The pitch is given a fixed `aspectRatio` so the markings hold their
+      proportions; the four slot rows moved to an absolutely-positioned layer
+      (`pitchRows`, `space-evenly`) on top of the markings, so slot layout and
+      the position picker are unchanged.
+- [x] New grass/paint constants only (`PITCH_STRIPE`, `PITCH_LINE_WIDTH`,
+      `PITCH_ASPECT_RATIO`) alongside the existing `PITCH_GREEN` / `PITCH_LINE`
+      — no theme tokens hard-coded.
+- [x] Test: the markings and each sub-part render (by `testID`), on top of the
+      existing slot/assignment/availability tests.
+
 ### M7.1 — Clashing kickoff warning ([#28](https://github.com/mgphp/matchday/issues/28))
 
 Closes an M7 known gap: nothing stopped a coach adding two fixtures in the
