@@ -18,7 +18,13 @@ describe('EditMatchModal', () => {
   it('has no score fields and submits for a scheduled match', async () => {
     const onSubmit = jest.fn().mockResolvedValue(undefined);
     const { queryByLabelText, getByText } = await render(
-      <EditMatchModal visible onClose={jest.fn()} match={scheduledMatch} onSubmit={onSubmit} />,
+      <EditMatchModal
+        visible
+        onClose={jest.fn()}
+        match={scheduledMatch}
+        onSubmit={onSubmit}
+        onRemove={jest.fn().mockResolvedValue(undefined)}
+      />,
     );
 
     expect(queryByLabelText('U10')).toBeNull();
@@ -34,7 +40,13 @@ describe('EditMatchModal', () => {
 
   it('requires both scores once Live is selected', async () => {
     const { getByLabelText, getByText } = await render(
-      <EditMatchModal visible onClose={jest.fn()} match={scheduledMatch} onSubmit={jest.fn()} />,
+      <EditMatchModal
+        visible
+        onClose={jest.fn()}
+        match={scheduledMatch}
+        onSubmit={jest.fn()}
+        onRemove={jest.fn().mockResolvedValue(undefined)}
+      />,
     );
 
     await userEvent.press(getByLabelText('Live'));
@@ -49,7 +61,13 @@ describe('EditMatchModal', () => {
 
   it('points at the match clock instead of a minute field when Live is selected', async () => {
     const { getByLabelText, findByText, queryByLabelText } = await render(
-      <EditMatchModal visible onClose={jest.fn()} match={scheduledMatch} onSubmit={jest.fn()} />,
+      <EditMatchModal
+        visible
+        onClose={jest.fn()}
+        match={scheduledMatch}
+        onSubmit={jest.fn()}
+        onRemove={jest.fn().mockResolvedValue(undefined)}
+      />,
     );
 
     await userEvent.press(getByLabelText('Live'));
@@ -62,7 +80,13 @@ describe('EditMatchModal', () => {
     const onSubmit = jest.fn().mockResolvedValue(undefined);
     const onClose = jest.fn();
     const { getByLabelText, getByText } = await render(
-      <EditMatchModal visible onClose={onClose} match={scheduledMatch} onSubmit={onSubmit} />,
+      <EditMatchModal
+        visible
+        onClose={onClose}
+        match={scheduledMatch}
+        onSubmit={onSubmit}
+        onRemove={jest.fn().mockResolvedValue(undefined)}
+      />,
     );
 
     await userEvent.press(getByLabelText('Live'));
@@ -82,7 +106,13 @@ describe('EditMatchModal', () => {
   it('defaults full-time minutes to 90 and submits an edited value', async () => {
     const onSubmit = jest.fn().mockResolvedValue(undefined);
     const { getByLabelText, getByText } = await render(
-      <EditMatchModal visible onClose={jest.fn()} match={scheduledMatch} onSubmit={onSubmit} />,
+      <EditMatchModal
+        visible
+        onClose={jest.fn()}
+        match={scheduledMatch}
+        onSubmit={onSubmit}
+        onRemove={jest.fn().mockResolvedValue(undefined)}
+      />,
     );
 
     const field = getByLabelText('Full-time minutes');
@@ -102,6 +132,7 @@ describe('EditMatchModal', () => {
         onClose={jest.fn()}
         match={{ ...scheduledMatch, durationMinutes: 60 }}
         onSubmit={jest.fn()}
+        onRemove={jest.fn().mockResolvedValue(undefined)}
       />,
     );
 
@@ -124,7 +155,13 @@ describe('EditMatchModal', () => {
       periods: [{ period: 'first', startedAt: '2026-09-05T10:00:00Z' }],
     };
     const { getByLabelText } = await render(
-      <EditMatchModal visible onClose={jest.fn()} match={liveMatch} onSubmit={jest.fn()} />,
+      <EditMatchModal
+        visible
+        onClose={jest.fn()}
+        match={liveMatch}
+        onSubmit={jest.fn()}
+        onRemove={jest.fn().mockResolvedValue(undefined)}
+      />,
     );
 
     expect(getByLabelText('U10').props.value).toBe('2');
@@ -135,12 +172,60 @@ describe('EditMatchModal', () => {
     const onSubmit = jest.fn().mockRejectedValue(new Error('nope'));
     const onClose = jest.fn();
     const { getByText, findByText } = await render(
-      <EditMatchModal visible onClose={onClose} match={scheduledMatch} onSubmit={onSubmit} />,
+      <EditMatchModal
+        visible
+        onClose={onClose}
+        match={scheduledMatch}
+        onSubmit={onSubmit}
+        onRemove={jest.fn().mockResolvedValue(undefined)}
+      />,
     );
 
     await userEvent.press(getByText('Save'));
 
     expect(await findByText(/Could not update the match/)).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('removes the fixture after an in-modal confirm', async () => {
+    const onRemove = jest.fn().mockResolvedValue(undefined);
+    const { getByText, findByText, queryByText } = await render(
+      <EditMatchModal
+        visible
+        onClose={jest.fn()}
+        match={scheduledMatch}
+        onSubmit={jest.fn()}
+        onRemove={onRemove}
+      />,
+    );
+
+    await userEvent.press(getByText('Remove fixture'));
+    expect(await findByText(/Delete this fixture and its events/)).toBeTruthy();
+    expect(onRemove).not.toHaveBeenCalled();
+
+    await userEvent.press(getByText('Delete fixture'));
+    expect(onRemove).toHaveBeenCalled();
+
+    // The confirm collapses if you back out instead.
+    expect(queryByText('Remove fixture')).toBeNull();
+  });
+
+  it('backs out of the remove confirm with Cancel', async () => {
+    const onRemove = jest.fn().mockResolvedValue(undefined);
+    const { getByText, findByText } = await render(
+      <EditMatchModal
+        visible
+        onClose={jest.fn()}
+        match={scheduledMatch}
+        onSubmit={jest.fn()}
+        onRemove={onRemove}
+      />,
+    );
+
+    await userEvent.press(getByText('Remove fixture'));
+    await userEvent.press(getByText('Cancel'));
+
+    expect(await findByText('Remove fixture')).toBeTruthy();
+    expect(onRemove).not.toHaveBeenCalled();
   });
 });

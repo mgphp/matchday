@@ -545,6 +545,29 @@ minutes, not just a reactive "due on / due off".
       uneven counts stay close, ascending order, skips a pointless swap) and a
       `match-detail-screen.test.tsx` case (live timer + plan card render).
 
+### M14 — Remove a fixture ([#54](https://github.com/mgphp/matchday/issues/54))
+
+Closes the write-path gap that M7 left: fixtures could be created and edited
+but never deleted.
+
+- [x] `MatchdayRepository.removeMatch(id)` — rejects for an unknown id.
+      `mockRepository` splices `fixtures` and drops the match's
+      `events` / `lineups` / `formations` / `availability` entries;
+      `HttpRepository` sends `DELETE teams/{teamId}/matches/{id}` with a plain
+      `fetch` (no response body to parse). Added to the `repository` proxy.
+- [x] `EditMatchModal` gains a required `onRemove` prop and a "Remove fixture"
+      button that expands to a two-step in-modal confirm ("Delete this fixture
+      and its events? This can't be undone." → Cancel / Delete fixture) —
+      testable and consistent with the app's no-OS-dialog style.
+- [x] `match/[id].tsx` passes `onRemove` (`removeMatch` then `router.back()`,
+      falling back to `router.replace('/')`).
+- [x] `(tabs)/index.tsx` refetches fixtures on screen focus via
+      `useFocusEffect`, skipping the first focus, so the list drops a deleted
+      match (and picks up score edits) on return.
+- [x] Tests: `mock-repository` (remove + cleanup + not-found),
+      `http-repository` (DELETE shape + non-ok throws), `edit-match-modal`
+      (confirm flow, cancel), `match-detail-screen` (remove navigates back).
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)

@@ -1,12 +1,15 @@
 import { useLocalSearchParams } from 'expo-router';
-import { render, userEvent } from '@testing-library/react-native';
+import { render, userEvent, waitFor } from '@testing-library/react-native';
 
 import MatchDetailScreen from '@/app/match/[id]';
 import { mockRepository } from '@/lib/data/mock-repository';
 import { TeamProvider } from '@/lib/team-context';
 
+const mockBack = jest.fn();
+const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
   useLocalSearchParams: jest.fn(),
+  useRouter: () => ({ back: mockBack, replace: mockReplace, canGoBack: () => true }),
 }));
 
 const ownTeam = { id: 'rovers', name: 'Northgate Rovers', shortName: 'NGR', clubId: 'club-1' };
@@ -22,6 +25,8 @@ function renderScreen() {
 describe('MatchDetailScreen', () => {
   beforeEach(() => {
     jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'm1' });
+    mockBack.mockClear();
+    mockReplace.mockClear();
   });
 
   it('renders score, events and lineups for a live match', async () => {
@@ -190,6 +195,27 @@ describe('MatchDetailScreen', () => {
     await userEvent.press(getByText('Edit lineup'));
 
     expect(await findByText('Save lineup')).toBeTruthy();
+  });
+
+  it('removes a fixture from Edit match and navigates back', async () => {
+    const created = await mockRepository.createMatch({
+      competition: 'Friendly',
+      kickoff: '2026-10-01T10:00:00Z',
+      venue: 'Somewhere',
+      home: ownTeam,
+      away: { id: 'x', name: 'Some Other Team', shortName: 'SOT' },
+    });
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: created.id });
+
+    const { findByText, getByText } = await renderScreen();
+    await findByText('Northgate Rovers v Some Other Team');
+
+    await userEvent.press(getByText('Edit match'));
+    await userEvent.press(await findByText('Remove fixture'));
+    await userEvent.press(getByText('Delete fixture'));
+
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    await expect(mockRepository.getMatch(created.id)).rejects.toThrow(/No match/);
   });
 
   it('shows a live timer and a forward rotation plan while a match is under way', async () => {

@@ -28,11 +28,14 @@ export function EditMatchModal({
   onClose,
   match,
   onSubmit,
+  onRemove,
 }: {
   visible: boolean;
   onClose: () => void;
   match: Match;
   onSubmit: (update: MatchScoreUpdate) => Promise<void>;
+  /** Deletes the fixture. The caller navigates away once it resolves. */
+  onRemove: () => Promise<void>;
 }) {
   const [status, setStatus] = useState<MatchStatus>(match.status);
   const [homeScore, setHomeScore] = useState(match.homeScore?.toString() ?? '');
@@ -42,6 +45,8 @@ export function EditMatchModal({
   );
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const parsedHome = Number(homeScore);
   const parsedAway = Number(awayScore);
@@ -62,7 +67,20 @@ export function EditMatchModal({
 
   const handleClose = () => {
     setError(undefined);
+    setConfirmingRemove(false);
     onClose();
+  };
+
+  const handleRemove = async () => {
+    setError(undefined);
+    setIsRemoving(true);
+    try {
+      await onRemove();
+    } catch {
+      setError('Could not remove the match. Try again.');
+      setIsRemoving(false);
+      setConfirmingRemove(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -145,6 +163,39 @@ export function EditMatchModal({
           onPress={handleSubmit}
           disabled={isSubmitting || !isComplete}
         />
+
+        <View style={styles.removeSection}>
+          {confirmingRemove ? (
+            <>
+              <Text style={styles.removeWarning}>
+                Delete this fixture and its events? This can&#8217;t be undone.
+              </Text>
+              <View style={styles.removeActions}>
+                <View style={styles.removeAction}>
+                  <Button
+                    label="Cancel"
+                    variant="secondary"
+                    onPress={() => setConfirmingRemove(false)}
+                    disabled={isRemoving}
+                  />
+                </View>
+                <View style={styles.removeAction}>
+                  <Button
+                    label={isRemoving ? 'Removing…' : 'Delete fixture'}
+                    onPress={handleRemove}
+                    disabled={isRemoving}
+                  />
+                </View>
+              </View>
+            </>
+          ) : (
+            <Button
+              label="Remove fixture"
+              variant="secondary"
+              onPress={() => setConfirmingRemove(true)}
+            />
+          )}
+        </View>
       </Screen>
     </Modal>
   );
@@ -174,5 +225,20 @@ const styles = StyleSheet.create({
   error: {
     ...typography.caption,
     color: colors.danger,
+  },
+  removeSection: {
+    marginTop: spacing.xl,
+    gap: spacing.sm,
+  },
+  removeWarning: {
+    ...typography.caption,
+    color: colors.danger,
+  },
+  removeActions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  removeAction: {
+    flex: 1,
   },
 });
