@@ -77,7 +77,9 @@ EXPO_PUBLIC_COGNITO_USER_POOL_ID=<region>_xxxxxxxxx
 EXPO_PUBLIC_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-Coaches sign in (or register) on first launch — see `src/components/auth/`. Cognito auth pulls
+Coaches sign in (or register) on first launch — see `src/components/auth/`. A "Forgot password?"
+link on the sign-in screen runs the Cognito reset flow: request a one-time code by email, then
+set a new password with it. Cognito auth pulls
 in a native crypto polyfill (`react-native-get-random-values`), so **Expo Go can't run this app**;
 use a dev client build (`npx eas build --profile development`, per the Builds section below).
 

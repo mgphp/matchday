@@ -83,6 +83,36 @@ describe('AuthProvider / useAuth', () => {
     expect(result.current.status).toEqual({ state: 'signedIn', tokens });
   });
 
+  it('delegates forgotPassword to the Cognito wrapper', async () => {
+    mockedCognito.forgotPassword.mockResolvedValue(undefined);
+
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.status.state).toBe('signedOut'));
+
+    await act(async () => {
+      await result.current.forgotPassword('coach@example.com');
+    });
+
+    expect(mockedCognito.forgotPassword).toHaveBeenCalledWith('coach@example.com');
+  });
+
+  it('delegates confirmForgotPassword to the Cognito wrapper', async () => {
+    mockedCognito.confirmForgotPassword.mockResolvedValue(undefined);
+
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.status.state).toBe('signedOut'));
+
+    await act(async () => {
+      await result.current.confirmForgotPassword('coach@example.com', '123456', 'newPassword123');
+    });
+
+    expect(mockedCognito.confirmForgotPassword).toHaveBeenCalledWith(
+      'coach@example.com',
+      '123456',
+      'newPassword123',
+    );
+  });
+
   it('signs out and clears the stored session', async () => {
     mockedCognito.signIn.mockResolvedValue({ type: 'success', tokens });
 

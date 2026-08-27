@@ -485,6 +485,28 @@ didn't turn up still lowered everyone else's target and sat permanently at
   a match reads as unavailable for it, because they aren't in the stored
   list. Only affects fixtures already marked up.
 
+### M5.1 — Forgot-password flow ([#48](https://github.com/mgphp/matchday/issues/48))
+
+Closes an M5 gap: a coach who forgot their password was locked out entirely —
+the only recovery was an admin running `aws cognito-idp admin-set-user-password`
+by hand.
+
+- [x] `cognito.ts` gains `forgotPassword` (emails a one-time code) and
+      `confirmForgotPassword` (code + new password), thin wrappers over
+      `amazon-cognito-identity-js`'s `forgotPassword`/`confirmPassword`. Reuses
+      the pool's existing verification-email channel, so no CDK or `.env`
+      change.
+- [x] `useAuth()` exposes both as pass-throughs — no `AuthStatus` change, since
+      the flow ends back on the login screen where the coach signs in normally.
+- [x] `ForgotPasswordScreen` (`src/components/auth/`) — one screen, two steps
+      (request code → set password), styled like the other auth screens with
+      generic error copy on failure.
+- [x] `AuthGate` adds a `'forgot'` route; `LoginScreen` gets a "Forgot
+      password?" link (`onForgotPassword` prop) alongside the register link.
+- [x] Tests: the two context methods (delegation to `cognito`),
+      `ForgotPasswordScreen` (both steps, both error paths, back link), and the
+      new `AuthGate` route.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)

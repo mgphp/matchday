@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import { useAuth } from '@/lib/auth/auth-context';
@@ -24,6 +24,8 @@ function baseAuth(overrides: Partial<ReturnType<typeof useAuth>>) {
     completeNewPassword: jest.fn(),
     signUp: jest.fn(),
     confirmSignUp: jest.fn(),
+    forgotPassword: jest.fn(),
+    confirmForgotPassword: jest.fn(),
     signOut: jest.fn(),
     getAccessToken: jest.fn().mockResolvedValue('token'),
     ...overrides,
@@ -58,6 +60,20 @@ describe('AuthGate', () => {
     );
 
     expect(screen.getByText('Sign in')).toBeTruthy();
+  });
+
+  it('shows the forgot-password screen from the login link', async () => {
+    mockedUseAuth.mockReturnValue(baseAuth({ status: { state: 'signedOut' } }));
+
+    await render(
+      <AuthGate>
+        <Text>Tabs</Text>
+      </AuthGate>,
+    );
+
+    await userEvent.press(screen.getByText('Forgot password?'));
+
+    expect(screen.getByText('Send reset code')).toBeTruthy();
   });
 
   it('shows the new-password screen when Cognito requires it', async () => {
