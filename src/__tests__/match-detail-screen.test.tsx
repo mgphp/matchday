@@ -191,4 +191,29 @@ describe('MatchDetailScreen', () => {
 
     expect(await findByText('Save lineup')).toBeTruthy();
   });
+
+  it('shows a live timer and a forward rotation plan while a match is under way', async () => {
+    // Stretch m1 to a 100-minute game so a planned break still lands after
+    // its stored 62nd minute. m1: 5-a-side (4 outfield) over a squad of 7.
+    await mockRepository.updateMatchScore('m1', { status: 'live', durationMinutes: 100 });
+    // An earlier test may have pinned m1's availability — reset to full squad.
+    await mockRepository.updateLineup('m1', {
+      side: 'home',
+      players: (await mockRepository.getMatch('m1')).lineups?.home ?? [],
+      availablePlayerIds: undefined,
+    });
+
+    const { findByText, getByText, getByLabelText } = await renderScreen();
+    await findByText('Rotation plan');
+
+    // Prominent match timer.
+    expect(getByLabelText(/Match clock, 62 minutes/)).toBeTruthy();
+    // Even outfield share: 100 * 4 / 6 ≈ 67, keeper held out.
+    expect(getByText(/goalkeeper isn/)).toBeTruthy();
+    expect(getByText(/Next sub 67/)).toBeTruthy();
+    // A planned break names a bench player coming on for someone on the pitch.
+    expect(getByLabelText(/At 67 minutes: .+ on for .+/)).toBeTruthy();
+
+    await mockRepository.updateMatchScore('m1', { status: 'live', durationMinutes: undefined });
+  });
 });

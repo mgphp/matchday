@@ -33,6 +33,13 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
   they drift off it. A "Due off … · Due on …" hint sits next to the
   Substitution button. Set the match length with "Full-time minutes" in
   "Edit match" — it defaults to 90 (`src/lib/rotation.ts`)
+- **Rotation plan** — once a match kicks off, a prominent timer and a
+  forward substitution schedule: the match is split into equal shifts so every
+  available outfielder gets the same minutes, and the plan lists the minute
+  each swap should happen at (who comes on for whom). It recomputes from the
+  live clock and the subs already recorded, so drift self-corrects. The
+  goalkeeper is held out of the maths but can still be swapped by hand
+  (`src/lib/rotation-plan.ts`)
 - **Substitutions** — while a match is live, "Substitution" records who came
   off, who came on and at what minute (defaulting to the clock). The timeline
   and the on-pitch/bench split both follow from these events

@@ -516,6 +516,35 @@ by hand.
       `ForgotPasswordScreen` (both steps, both error paths, back link), and the
       new `AuthGate` route.
 
+### M13 — Live timer + auto substitution schedule ([#52](https://github.com/mgphp/matchday/issues/52))
+
+Builds on the rotation helper (M12): a coach kicking off a match now gets a
+prominent clock and a forward plan of _when_ to make each swap for even
+minutes, not just a reactive "due on / due off".
+
+- [x] `src/lib/rotation-plan.ts` — `rotationPlan(...)` takes the outfield
+      minutes, on-pitch count, duration and elapsed clock, and returns
+      `{ target, subs, nextSub, projected }`. The match is split into
+      `ceil(available / benchCount)` equal segments (min 2), and at each
+      break the longest-on outfielders swap for the longest-off. Pure,
+      and recomputed each render from the live clock and the subs already
+      recorded, so a late kick-off or a missed swap self-corrects. `projected`
+      shows where everyone actually lands when the counts don't divide cleanly.
+- [x] Goalkeeper is **held out** of the plan and the even-share maths — the
+      match centre passes the outfield `PlayerMinutes` only (`position === 'GK'`
+      excluded). The keeper can still be swapped by hand via the existing
+      Substitution modal.
+- [x] Match centre (`src/app/match/[id].tsx`): a prominent minute + period
+      label while live; a "Next sub N′ (in x min): …" line by the Substitution
+      button; and a **Rotation plan** card listing the remaining swaps grouped
+      by minute, with the even-share target and a "goalkeeper isn't rotated"
+      note. The reactive Due on/off hint stays.
+- [x] Duration comes from `Match.durationMinutes` (editable in Edit match;
+      defaults to 90 — set 50 for 7-a-side).
+- [x] Tests: `rotation-plan.test.ts` (even split, no-bench, adapts mid-match,
+      uneven counts stay close, ascending order, skips a pointless swap) and a
+      `match-detail-screen.test.tsx` case (live timer + plan card render).
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)
