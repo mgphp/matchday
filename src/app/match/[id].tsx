@@ -30,6 +30,7 @@ import {
   rotation,
   type RotationEntry,
 } from '@/lib/rotation';
+import { rotationPlan, type PlannedSub } from '@/lib/rotation-plan';
 import { useTeam } from '@/lib/team-context';
 import type { MatchDetail, MatchEvent, Player } from '@/lib/types';
 import { useData } from '@/lib/use-data';
@@ -113,6 +114,17 @@ const ROTATION_LABELS: Record<RotationEntry['status'], string> = {
   'on-track': 'on track',
   over: 'due off',
 };
+
+/** Planned subs bucketed by the minute they happen at, minute ascending. */
+function subsByMinute(subs: PlannedSub[]): { minute: number; swaps: PlannedSub[] }[] {
+  const groups = new Map<number, PlannedSub[]>();
+  for (const sub of subs) {
+    groups.set(sub.minute, [...(groups.get(sub.minute) ?? []), sub]);
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([minute, swaps]) => ({ minute, swaps }));
+}
 
 function MinutesRow({ entry }: { entry: RotationEntry }) {
   return (
@@ -245,11 +257,12 @@ export default function MatchDetailScreen() {
   // missing player doesn't drag everyone else's share down.
   const availableMinutes = minutesPlayed?.filter((entry) => isAvailable(data, entry.player.id));
   const missing = minutesPlayed?.filter((entry) => !isAvailable(data, entry.player.id)) ?? [];
+  const duration = data.durationMinutes ?? DEFAULT_DURATION_MINUTES;
   const rotationEntries = availableMinutes
     ? rotation({
         minutes: availableMinutes,
         onPitchCount: ourLineup?.length ?? 0,
-        duration: data.durationMinutes ?? DEFAULT_DURATION_MINUTES,
+        duration,
         elapsed: minute,
       })
     : undefined;
@@ -257,6 +270,36 @@ export default function MatchDetailScreen() {
   const bench = rotationEntries?.filter((entry) => !entry.isOnPitch) ?? [];
   const nextOn = rotationEntries ? dueOn(rotationEntries) : undefined;
   const nextOff = rotationEntries ? dueOff(rotationEntries) : undefined;
+
+  // Forward sub schedule for even outfield minutes. The keeper is held out of
+  // the maths (they can still be swapped by hand via the substitution modal).
+  const keeper = ourLineup?.find((player) => player.position === 'GK') ?? ourLineup?.[0];
+  const outfieldOnPitch = (ourLineup?.length ?? 0) - (keeper ? 1 : 0);
+  const outfieldMinutes = availableMinutes?.filter((entry) => entry.player.id !== keeper?.id);
+  const plan =
+    data.status === 'live' && outfieldMinutes && outfieldMinutes.length > 0 && outfieldOnPitch > 0
+      ? rotationPlan({
+          minutes: outfieldMinutes,
+          onPitchCount: outfieldOnPitch,
+          duration,
+          elapsed: minute,
+        })
+      : undefined;
+  const nextBreak = plan?.nextSub
+    ? plan.subs.filter((sub) => sub.minute === plan.nextSub!.minute)
+    : [];
+
+  const running = runningPeriod(data.periods);
+  const periodLabel =
+    data.status !== 'live'
+      ? undefined
+      : running
+        ? running.period === 'first'
+          ? '1st half'
+          : '2nd half'
+        : clockAction === 'second-half'
+          ? 'Half time'
+          : undefined;
 
   return (
     <Screen>
@@ -279,6 +322,17 @@ export default function MatchDetailScreen() {
             </View>
           ) : null}
           <Text style={styles.venue}>{data.venue}</Text>
+          {data.status === 'live' ? (
+            <View
+              style={styles.clockBlock}
+              accessibilityLabel={`Match clock, ${minute} minutes${
+                periodLabel ? `, ${periodLabel}` : ''
+              }`}
+            >
+              <Text style={styles.clockMinute}>{minute}&#8242;</Text>
+              {periodLabel ? <Text style={styles.clockPeriod}>{periodLabel}</Text> : null}
+            </View>
+          ) : null}
           {clockAction ? (
             <Button
               label={isUpdatingClock ? 'Saving…' : CLOCK_ACTION_LABELS[clockAction]}
@@ -306,6 +360,15 @@ export default function MatchDetailScreen() {
               {nextOff ? `Due off: ${nextOff.player.name}` : null}
               {nextOff && nextOn ? ' · ' : null}
               {nextOn ? `Due on: ${nextOn.player.name}` : null}
+            </Text>
+          ) : null}
+          {plan?.nextSub ? (
+            <Text style={styles.nextSubHint}>
+              {`Next sub ${plan.nextSub.minute}′`}
+              {plan.nextSub.minute > minute ? ` (in ${plan.nextSub.minute - minute} min)` : ''}
+              {`: ${nextBreak
+                .map((sub) => `${sub.on.squadNumber} for ${sub.off.squadNumber}`)
+                .join(', ')}`}
             </Text>
           ) : null}
         </Card>
@@ -342,6 +405,39 @@ export default function MatchDetailScreen() {
                 ))}
               </>
             ) : null}
+          </Card>
+        ) : null}
+
+        {plan && plan.subs.length > 0 ? (
+          <Card>
+            <SectionHeader title="Rotation plan" variant="accent" />
+            <Text style={styles.planTarget}>
+              Even share ≈ {plan.target}&#8242; each · goalkeeper isn&#8217;t rotated
+            </Text>
+            {subsByMinute(plan.subs).map(({ minute: at, swaps }) => (
+              <View
+                key={at}
+                style={styles.planBreak}
+                accessibilityLabel={`At ${at} minutes: ${swaps
+                  .map((sub) => `${sub.on.name} on for ${sub.off.name}`)
+                  .join(', ')}`}
+              >
+                <Text style={styles.planMinute}>{at}&#8242;</Text>
+                <View style={styles.planSwaps}>
+                  {swaps.map((sub) => (
+                    <Text key={`${sub.on.id}-${sub.off.id}`} style={styles.planSwap}>
+                      <Text style={styles.planOn}>
+                        &#8593; {sub.on.squadNumber} {sub.on.name}
+                      </Text>
+                      {'   '}
+                      <Text style={styles.planOff}>
+                        &#8595; {sub.off.squadNumber} {sub.off.name}
+                      </Text>
+                    </Text>
+                  ))}
+                </View>
+              </View>
+            ))}
           </Card>
         ) : null}
 
@@ -497,6 +593,54 @@ const styles = StyleSheet.create({
   },
   rotationHint: {
     ...typography.caption,
+    color: colors.textSecondary,
+  },
+  nextSubHint: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.accent,
+  },
+  clockBlock: {
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  clockMinute: {
+    ...typography.title,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  clockPeriod: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  planTarget: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  planBreak: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  planMinute: {
+    ...typography.body,
+    fontWeight: '700',
+    color: colors.accent,
+    width: spacing.xl,
+  },
+  planSwaps: {
+    flex: 1,
+    gap: spacing.xs / 2,
+  },
+  planSwap: {
+    ...typography.body,
+    color: colors.text,
+  },
+  planOn: {
+    color: colors.accent,
+  },
+  planOff: {
     color: colors.textSecondary,
   },
   eventRow: {
