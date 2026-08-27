@@ -4,6 +4,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { Button } from '@/components/button';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
+import { Select } from '@/components/select';
 import { StateView } from '@/components/state-view';
 import { repository } from '@/lib/data';
 import type { LineupUpdate } from '@/lib/data/repository';
@@ -14,14 +15,36 @@ import { colors, radii, spacing, typography } from '@/theme/theme';
 const MIN_TEAM_SIZE = 5;
 const MAX_TEAM_SIZE = 11;
 const DEFAULT_TEAM_SIZE = 7;
+const TEAM_SIZES: readonly string[] = Array.from(
+  { length: MAX_TEAM_SIZE - MIN_TEAM_SIZE + 1 },
+  (_, i) => String(MIN_TEAM_SIZE + i),
+);
 
 /** Pitch colours — deliberately real grass/paint, not theme tokens. */
-const PITCH_GREEN = '#1e5631';
-const PITCH_STRIPE = '#1a4b2b';
-const PITCH_LINE = 'rgba(255,255,255,0.5)';
-const PITCH_LINE_WIDTH = 2;
-/** Portrait half-pitch: full width, a little taller — room for four slot rows. */
-const PITCH_ASPECT_RATIO = 0.82;
+const PITCH_GREEN = '#2f8f45';
+/** Faint white paint, like a broadcast graphic. */
+const PITCH_LINE = 'rgba(255,255,255,0.22)';
+const PITCH_LINE_WIDTH = 1;
+/** Full pitch, portrait — both boxes visible, room for four slot rows. */
+const PITCH_ASPECT_RATIO = 0.64;
+
+/** Mixes two `#rrggbb` colours; `t` runs 0 (from) → 1 (to). */
+function mixHex(from: string, to: string, t: number): string {
+  const channels = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const [r1, g1, b1] = channels(from);
+  const [r2, g2, b2] = channels(to);
+  const lerp = (a: number, b: number) =>
+    Math.round(a + (b - a) * t)
+      .toString(16)
+      .padStart(2, '0');
+  return `#${lerp(r1, r2)}${lerp(g1, g2)}${lerp(b1, b2)}`;
+}
+
+/**
+ * A top-to-bottom green ramp, brighter at the top — stacked bands stand in for
+ * a real gradient fill (no gradient primitive in React Native, no dep added).
+ */
+const PITCH_GRADIENT = Array.from({ length: 16 }, (_, i) => mixHex('#3fa457', '#1c5f30', i / 15));
 
 /** Every way to split `outfield` players into 3 positive groups (DF-MF-FW). */
 function formationsFor(outfield: number): string[] {
@@ -90,30 +113,49 @@ function placeBySlots(
 const GROUP_ORDER: Group[] = ['FW', 'MF', 'DF', 'GK'];
 
 /**
- * The line markings of a defensive half, drawn with plain Views: our goal is
- * at the bottom, the halfway line across the top. Arcs are half/quarter
- * circles made with one rounded, one-sided-open border rather than SVG or
- * clip-path (neither is available here). Purely decorative — it sits behind
- * the tappable slots and carries no interaction.
+ * A full pitch drawn with plain Views over a stacked-band green gradient: our
+ * goal at the bottom, the opponent's at the top, halfway line and centre
+ * circle across the middle. Arcs are half/quarter circles made with a
+ * rounded, one-side-open border — React Native has no SVG or clip-path.
+ * Purely decorative: it sits behind the tappable slots and takes no input.
  */
 function PitchMarkings() {
   return (
     <View style={styles.markings} pointerEvents="none" testID="pitch-markings">
-      <View style={styles.stripes} testID="pitch-stripes">
-        {Array.from({ length: 6 }, (_, i) => (
-          <View key={i} style={[styles.stripe, i % 2 === 1 && styles.stripeAlt]} />
+      <View style={styles.gradient} testID="pitch-gradient">
+        {PITCH_GRADIENT.map((colour, i) => (
+          <View key={i} style={[styles.gradientBand, { backgroundColor: colour }]} />
         ))}
       </View>
+
       <View style={styles.halfwayLine} testID="pitch-halfway-line" />
       <View style={styles.centreCircle} testID="pitch-centre-circle" />
       <View style={styles.centreSpot} />
-      <View style={styles.penaltyArea} testID="pitch-penalty-area" />
-      <View style={styles.goalArea} testID="pitch-goal-area" />
-      <View style={styles.penaltyArc} testID="pitch-penalty-arc" />
-      <View style={styles.penaltySpot} />
-      <View style={styles.goalFrame} testID="pitch-goal-frame" />
-      <View style={[styles.cornerArc, styles.cornerArcLeft]} testID="pitch-corner-arc-left" />
-      <View style={[styles.cornerArc, styles.cornerArcRight]} testID="pitch-corner-arc-right" />
+
+      {/* Opponent's end (top) */}
+      <View style={[styles.penaltyArea, styles.penaltyAreaTop]} testID="pitch-penalty-area-top" />
+      <View style={[styles.goalArea, styles.goalAreaTop]} testID="pitch-goal-area-top" />
+      <View style={[styles.penaltyArc, styles.penaltyArcTop]} testID="pitch-penalty-arc-top" />
+      <View style={[styles.penaltySpot, styles.penaltySpotTop]} />
+      <View style={[styles.goalFrame, styles.goalFrameTop]} testID="pitch-goal-frame-top" />
+
+      {/* Our end (bottom) */}
+      <View
+        style={[styles.penaltyArea, styles.penaltyAreaBottom]}
+        testID="pitch-penalty-area-bottom"
+      />
+      <View style={[styles.goalArea, styles.goalAreaBottom]} testID="pitch-goal-area-bottom" />
+      <View
+        style={[styles.penaltyArc, styles.penaltyArcBottom]}
+        testID="pitch-penalty-arc-bottom"
+      />
+      <View style={[styles.penaltySpot, styles.penaltySpotBottom]} />
+      <View style={[styles.goalFrame, styles.goalFrameBottom]} testID="pitch-goal-frame-bottom" />
+
+      <View style={[styles.cornerArc, styles.cornerArcTL]} testID="pitch-corner-arc-tl" />
+      <View style={[styles.cornerArc, styles.cornerArcTR]} testID="pitch-corner-arc-tr" />
+      <View style={[styles.cornerArc, styles.cornerArcBL]} testID="pitch-corner-arc-bl" />
+      <View style={[styles.cornerArc, styles.cornerArcBR]} testID="pitch-corner-arc-br" />
     </View>
   );
 }
@@ -139,47 +181,6 @@ function PitchSlot({
     >
       <Text style={styles.slotText}>{player ? player.squadNumber : '+'}</Text>
     </Pressable>
-  );
-}
-
-function Stepper({
-  label,
-  value,
-  onDecrement,
-  onIncrement,
-  decrementLabel,
-  incrementLabel,
-}: {
-  label: string;
-  value: string;
-  onDecrement: () => void;
-  onIncrement: () => void;
-  decrementLabel: string;
-  incrementLabel: string;
-}) {
-  return (
-    <View style={styles.stepperRow}>
-      <Text style={styles.stepperLabel}>{label}</Text>
-      <View style={styles.stepperControl}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={decrementLabel}
-          onPress={onDecrement}
-          style={styles.stepperButton}
-        >
-          <Text style={styles.stepperButtonText}>–</Text>
-        </Pressable>
-        <Text style={styles.stepperValue}>{value}</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={incrementLabel}
-          onPress={onIncrement}
-          style={styles.stepperButton}
-        >
-          <Text style={styles.stepperButtonText}>+</Text>
-        </Pressable>
-      </View>
-    </View>
   );
 }
 
@@ -264,8 +265,9 @@ export function EditLineupModal({
     setAssignments((current) => placeByPosition(Object.values(current), nextSlots));
   };
 
-  const changeFormation = (delta: number) => {
-    const nextIndex = (formationIndex + delta + formationOptions.length) % formationOptions.length;
+  const changeFormationTo = (next: string) => {
+    const nextIndex = formationOptions.indexOf(next);
+    if (nextIndex === -1 || nextIndex === formationIndex) return;
     const nextSlots = buildSlots(formationOptions[nextIndex]);
     setFormationIndex(nextIndex);
     setAssignments((current) => placeByPosition(Object.values(current), nextSlots));
@@ -354,21 +356,17 @@ export function EditLineupModal({
             </Pressable>
           </View>
 
-          <Stepper
+          <Select
             label="Team size"
+            options={TEAM_SIZES}
             value={String(teamSize)}
-            onDecrement={() => changeTeamSize(teamSize - 1)}
-            onIncrement={() => changeTeamSize(teamSize + 1)}
-            decrementLabel="Fewer players"
-            incrementLabel="More players"
+            onChange={(next) => changeTeamSize(Number(next))}
           />
-          <Stepper
+          <Select
             label="Formation"
+            options={formationOptions}
             value={formation}
-            onDecrement={() => changeFormation(-1)}
-            onIncrement={() => changeFormation(1)}
-            decrementLabel="Previous formation"
-            incrementLabel="Next formation"
+            onChange={changeFormationTo}
           />
 
           {loadError ? (
@@ -511,41 +509,6 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.accent,
   },
-  stepperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  stepperLabel: {
-    ...typography.body,
-    color: colors.text,
-  },
-  stepperControl: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  stepperButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.full,
-    backgroundColor: colors.surfaceRaised,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  stepperButtonText: {
-    ...typography.heading,
-    color: colors.accent,
-  },
-  stepperValue: {
-    ...typography.body,
-    fontWeight: '600',
-    color: colors.text,
-    minWidth: 56,
-    textAlign: 'center',
-  },
   pitch: {
     borderRadius: radii.lg,
     backgroundColor: PITCH_GREEN,
@@ -561,117 +524,158 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  stripes: {
+  gradient: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
   },
-  stripe: {
+  gradientBand: {
     flex: 1,
-    backgroundColor: PITCH_GREEN,
-  },
-  stripeAlt: {
-    backgroundColor: PITCH_STRIPE,
   },
   halfwayLine: {
     position: 'absolute',
     left: 0,
     right: 0,
-    top: 0,
+    top: '50%',
     height: PITCH_LINE_WIDTH,
     backgroundColor: PITCH_LINE,
   },
   centreCircle: {
     position: 'absolute',
-    top: 0,
-    left: '30%',
-    width: '40%',
-    aspectRatio: 2,
+    top: '40%',
+    left: '35%',
+    width: '30%',
+    aspectRatio: 1,
     borderColor: PITCH_LINE,
     borderWidth: PITCH_LINE_WIDTH,
-    borderTopWidth: 0,
-    borderBottomLeftRadius: radii.full,
-    borderBottomRightRadius: radii.full,
+    borderRadius: radii.full,
   },
   centreSpot: {
     position: 'absolute',
-    top: -3,
+    top: '50%',
     left: '50%',
-    width: 6,
-    height: 6,
-    marginLeft: -3,
+    width: 5,
+    height: 5,
+    marginLeft: -2.5,
+    marginTop: -2.5,
     borderRadius: radii.full,
     backgroundColor: PITCH_LINE,
   },
   penaltyArea: {
     position: 'absolute',
-    bottom: 0,
-    left: '20%',
-    width: '60%',
-    height: '34%',
+    left: '21%',
+    width: '58%',
+    height: '16%',
     borderColor: PITCH_LINE,
     borderWidth: PITCH_LINE_WIDTH,
+  },
+  penaltyAreaTop: {
+    top: 0,
+    borderTopWidth: 0,
+  },
+  penaltyAreaBottom: {
+    bottom: 0,
     borderBottomWidth: 0,
   },
   goalArea: {
     position: 'absolute',
-    bottom: 0,
     left: '36%',
     width: '28%',
-    height: '14%',
+    height: '7%',
     borderColor: PITCH_LINE,
     borderWidth: PITCH_LINE_WIDTH,
+  },
+  goalAreaTop: {
+    top: 0,
+    borderTopWidth: 0,
+  },
+  goalAreaBottom: {
+    bottom: 0,
     borderBottomWidth: 0,
   },
   penaltyArc: {
     position: 'absolute',
-    bottom: '34%',
-    left: '38%',
-    width: '24%',
+    left: '39%',
+    width: '22%',
     aspectRatio: 2,
     borderColor: PITCH_LINE,
     borderWidth: PITCH_LINE_WIDTH,
+  },
+  penaltyArcTop: {
+    top: '16%',
+    borderTopWidth: 0,
+    borderBottomLeftRadius: radii.full,
+    borderBottomRightRadius: radii.full,
+  },
+  penaltyArcBottom: {
+    bottom: '16%',
     borderBottomWidth: 0,
     borderTopLeftRadius: radii.full,
     borderTopRightRadius: radii.full,
   },
   penaltySpot: {
     position: 'absolute',
-    bottom: '24%',
     left: '50%',
-    width: 5,
-    height: 5,
-    marginLeft: -2.5,
+    width: 4,
+    height: 4,
+    marginLeft: -2,
     borderRadius: radii.full,
     backgroundColor: PITCH_LINE,
   },
+  penaltySpotTop: {
+    top: '11%',
+  },
+  penaltySpotBottom: {
+    bottom: '11%',
+  },
   goalFrame: {
     position: 'absolute',
-    bottom: 0,
-    left: '42%',
-    width: '16%',
-    height: 6,
+    left: '43%',
+    width: '14%',
+    height: 5,
     borderColor: PITCH_LINE,
     borderWidth: PITCH_LINE_WIDTH,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  goalFrameTop: {
+    top: 0,
+    borderTopWidth: 0,
+  },
+  goalFrameBottom: {
+    bottom: 0,
     borderBottomWidth: 0,
-    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   cornerArc: {
     position: 'absolute',
-    bottom: 0,
-    width: '7%',
+    width: '6%',
     aspectRatio: 1,
     borderColor: PITCH_LINE,
   },
-  cornerArcLeft: {
+  cornerArcTL: {
+    top: 0,
+    left: 0,
+    borderBottomWidth: PITCH_LINE_WIDTH,
+    borderRightWidth: PITCH_LINE_WIDTH,
+    borderBottomRightRadius: radii.full,
+  },
+  cornerArcTR: {
+    top: 0,
+    right: 0,
+    borderBottomWidth: PITCH_LINE_WIDTH,
+    borderLeftWidth: PITCH_LINE_WIDTH,
+    borderBottomLeftRadius: radii.full,
+  },
+  cornerArcBL: {
+    bottom: 0,
     left: 0,
     borderTopWidth: PITCH_LINE_WIDTH,
     borderRightWidth: PITCH_LINE_WIDTH,
     borderTopRightRadius: radii.full,
   },
-  cornerArcRight: {
+  cornerArcBR: {
+    bottom: 0,
     right: 0,
     borderTopWidth: PITCH_LINE_WIDTH,
     borderLeftWidth: PITCH_LINE_WIDTH,

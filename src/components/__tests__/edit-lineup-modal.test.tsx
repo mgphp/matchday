@@ -64,7 +64,7 @@ describe('EditLineupModal', () => {
     expect(getByText('Save lineup')).toBeDisabled();
   });
 
-  it('draws the half-pitch markings behind the slots', async () => {
+  it('draws the full-pitch markings behind the slots', async () => {
     const { findByTestId, getByTestId } = await render(
       <EditLineupModal
         visible
@@ -77,15 +77,21 @@ describe('EditLineupModal', () => {
 
     expect(await findByTestId('pitch-markings')).toBeTruthy();
     for (const id of [
-      'pitch-stripes',
+      'pitch-gradient',
       'pitch-halfway-line',
       'pitch-centre-circle',
-      'pitch-penalty-area',
-      'pitch-goal-area',
-      'pitch-penalty-arc',
-      'pitch-goal-frame',
-      'pitch-corner-arc-left',
-      'pitch-corner-arc-right',
+      'pitch-penalty-area-top',
+      'pitch-penalty-area-bottom',
+      'pitch-goal-area-top',
+      'pitch-goal-area-bottom',
+      'pitch-penalty-arc-top',
+      'pitch-penalty-arc-bottom',
+      'pitch-goal-frame-top',
+      'pitch-goal-frame-bottom',
+      'pitch-corner-arc-tl',
+      'pitch-corner-arc-tr',
+      'pitch-corner-arc-bl',
+      'pitch-corner-arc-br',
     ]) {
       expect(getByTestId(id)).toBeTruthy();
     }
@@ -178,7 +184,7 @@ describe('EditLineupModal', () => {
     expect(queryByText(/2 Danny Whitmore/)).toBeNull();
   });
 
-  it('increasing team size regenerates the formation options', async () => {
+  it('choosing a bigger team size from the selector regenerates the formation options', async () => {
     const { findByText, getByLabelText } = await render(
       <EditLineupModal
         visible
@@ -188,11 +194,37 @@ describe('EditLineupModal', () => {
         onSubmit={jest.fn()}
       />,
     );
-    await findByText('7');
+    await findByText('2-2-2');
 
-    await userEvent.press(getByLabelText('More players'));
+    // Open the team-size select and pick 8.
+    await userEvent.press(getByLabelText('Team size, 7'));
+    await userEvent.press(getByLabelText('8'));
 
-    expect(await findByText('8')).toBeTruthy();
+    // 3-3-1 is a 7-outfield shape — only an option once team size is 8.
+    await userEvent.press(getByLabelText(/^Formation, /));
+    expect(await findByText('3-3-1')).toBeTruthy();
+  });
+
+  it('picks a formation from the selector and rebuilds the pitch slots', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined);
+    const { findByText, findAllByLabelText, getByLabelText, getByText } = await render(
+      <EditLineupModal visible onClose={jest.fn()} match={match} side="home" onSubmit={onSubmit} />,
+    );
+    // Default 2-2-2 has two defender slots.
+    expect(await findAllByLabelText('Add a DF to this position')).toHaveLength(2);
+
+    await userEvent.press(getByLabelText(/^Formation, /));
+    await userEvent.press(getByLabelText('3-2-1'));
+
+    await findByText('3-2-1');
+    expect((await findAllByLabelText('Add a DF to this position')).length).toBe(3);
+
+    const [firstDf] = await findAllByLabelText('Add a DF to this position');
+    await userEvent.press(firstDf);
+    await userEvent.press(getByText('Danny Whitmore'));
+    await userEvent.press(getByText('Save lineup'));
+
+    expect(onSubmit.mock.calls[0][0].formation).toBe('3-2-1');
   });
 
   it('submits the assigned players and formation', async () => {
@@ -268,7 +300,8 @@ describe('EditLineupModal', () => {
     );
     await findByText('2-2-2');
 
-    await userEvent.press(getByLabelText('More players'));
+    await userEvent.press(getByLabelText('Team size, 7'));
+    await userEvent.press(getByLabelText('8'));
     await findByText('8');
 
     // Both players are still on the pitch after the reflow, not bumped to
