@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { ChoiceChips } from '@/components/choice-chips';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
+import { Select } from '@/components/select';
 import { StateView } from '@/components/state-view';
 import { repository } from '@/lib/data';
 import type { LineupUpdate } from '@/lib/data/repository';
@@ -356,13 +356,13 @@ export function EditLineupModal({
             </Pressable>
           </View>
 
-          <ChoiceChips
+          <Select
             label="Team size"
             options={TEAM_SIZES}
             value={String(teamSize)}
             onChange={(next) => changeTeamSize(Number(next))}
           />
-          <ChoiceChips
+          <Select
             label="Formation"
             options={formationOptions}
             value={formation}

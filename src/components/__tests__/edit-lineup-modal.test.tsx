@@ -184,8 +184,8 @@ describe('EditLineupModal', () => {
     expect(queryByText(/2 Danny Whitmore/)).toBeNull();
   });
 
-  it('choosing a bigger team size regenerates the formation options', async () => {
-    const { findByText, getByLabelText, queryByText } = await render(
+  it('choosing a bigger team size from the selector regenerates the formation options', async () => {
+    const { findByText, getByLabelText } = await render(
       <EditLineupModal
         visible
         onClose={jest.fn()}
@@ -195,11 +195,13 @@ describe('EditLineupModal', () => {
       />,
     );
     await findByText('2-2-2');
-    // 3-3-1 is a 7-outfield shape — only reachable once team size is 8.
-    expect(queryByText('3-3-1')).toBeNull();
 
+    // Open the team-size select and pick 8.
+    await userEvent.press(getByLabelText('Team size, 7'));
     await userEvent.press(getByLabelText('8'));
 
+    // 3-3-1 is a 7-outfield shape — only an option once team size is 8.
+    await userEvent.press(getByLabelText(/^Formation, /));
     expect(await findByText('3-3-1')).toBeTruthy();
   });
 
@@ -211,10 +213,10 @@ describe('EditLineupModal', () => {
     // Default 2-2-2 has two defender slots.
     expect(await findAllByLabelText('Add a DF to this position')).toHaveLength(2);
 
+    await userEvent.press(getByLabelText(/^Formation, /));
     await userEvent.press(getByLabelText('3-2-1'));
 
     await findByText('3-2-1');
-    expect(getByLabelText('3-2-1').props.accessibilityState).toMatchObject({ selected: true });
     expect((await findAllByLabelText('Add a DF to this position')).length).toBe(3);
 
     const [firstDf] = await findAllByLabelText('Add a DF to this position');
@@ -298,8 +300,9 @@ describe('EditLineupModal', () => {
     );
     await findByText('2-2-2');
 
+    await userEvent.press(getByLabelText('Team size, 7'));
     await userEvent.press(getByLabelText('8'));
-    await findByText('3-3-1');
+    await findByText('8');
 
     // Both players are still on the pitch after the reflow, not bumped to
     // the substitutes bench.

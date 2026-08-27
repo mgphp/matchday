@@ -272,10 +272,11 @@ and one centred box, and team size / formation were `+`/`–` steppers.
       proportions; the four slot rows sit on an absolutely-positioned
       `space-evenly` layer over the markings, so slot layout and the position
       picker are unchanged.
-- [x] Team size and formation are now `ChoiceChips` single-selects (the app's
-      existing select control, already used in the fixture/player modals)
-      instead of steppers — `changeFormationTo(value)` replaces the old
-      delta-based `changeFormation`.
+- [x] Team size and formation are now dropdown selects — a new
+      `src/components/select.tsx` (`Select`): a compact `label … value ⌄` row
+      that toggles an inline option list, no overlay so it nests inside the
+      modal. Replaces the old `+`/`–` steppers;
+      `changeFormationTo(value)` replaces the delta-based `changeFormation`.
 - [x] New grass/paint constants only (`PITCH_LINE_WIDTH`, `PITCH_ASPECT_RATIO`,
       `PITCH_GRADIENT` via a small `mixHex` helper) alongside the existing
       `PITCH_GREEN` / `PITCH_LINE` — no theme tokens hard-coded.
