@@ -11,9 +11,11 @@ import { colors, spacing, typography } from '@/theme/theme';
 export function LoginScreen({
   onSubmit,
   onRegister,
+  onForgotPassword,
 }: {
   onSubmit: (email: string, password: string) => Promise<void>;
   onRegister: () => void;
+  onForgotPassword: () => void;
 }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -58,6 +60,7 @@ export function LoginScreen({
           disabled={isSubmitting || !email || !password}
         />
         <Button label="New coach? Register" variant="secondary" onPress={onRegister} />
+        <Button label="Forgot password?" variant="secondary" onPress={onForgotPassword} />
       </Card>
     </Screen>
   );

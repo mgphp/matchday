@@ -9,6 +9,7 @@ import { createHttpRepository } from '@/lib/data/http-repository';
 import { TeamProvider } from '@/lib/team-context';
 
 import { ConfirmScreen } from './confirm-screen';
+import { ForgotPasswordScreen } from './forgot-password-screen';
 import { LoginScreen } from './login-screen';
 import { NewPasswordScreen } from './new-password-screen';
 import { OnboardingScreen, type OnboardingDetails } from './onboarding-screen';
@@ -31,8 +32,19 @@ type SetupState =
  * swapped to the real API, then renders `children` (the tab navigator).
  */
 export function AuthGate({ children }: { children: ReactNode }) {
-  const { status, signIn, completeNewPassword, signUp, confirmSignUp, getAccessToken } = useAuth();
-  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'confirm'>('login');
+  const {
+    status,
+    signIn,
+    completeNewPassword,
+    signUp,
+    confirmSignUp,
+    forgotPassword,
+    confirmForgotPassword,
+    getAccessToken,
+  } = useAuth();
+  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'confirm' | 'forgot'>(
+    'login',
+  );
   const [pendingRegistration, setPendingRegistration] = useState<PendingRegistration | null>(null);
   const [setup, setSetup] = useState<SetupState>({ step: 'loading' });
 
@@ -123,7 +135,22 @@ export function AuthGate({ children }: { children: ReactNode }) {
         />
       );
     }
-    return <LoginScreen onSubmit={signIn} onRegister={() => setAuthScreen('register')} />;
+    if (authScreen === 'forgot') {
+      return (
+        <ForgotPasswordScreen
+          onRequestCode={forgotPassword}
+          onResetPassword={confirmForgotPassword}
+          onBackToLogin={() => setAuthScreen('login')}
+        />
+      );
+    }
+    return (
+      <LoginScreen
+        onSubmit={signIn}
+        onRegister={() => setAuthScreen('register')}
+        onForgotPassword={() => setAuthScreen('forgot')}
+      />
+    );
   }
 
   if (status.state === 'newPasswordRequired') {

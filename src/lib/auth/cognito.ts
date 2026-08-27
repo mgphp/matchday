@@ -53,6 +53,30 @@ export function confirmSignUp(email: string, code: string): Promise<void> {
   });
 }
 
+/** Starts a password reset — Cognito emails a one-time code to the address. */
+export function forgotPassword(email: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    new CognitoUser({ Username: email, Pool: pool() }).forgotPassword({
+      onSuccess: () => resolve(),
+      onFailure: (err: Error) => reject(err),
+    });
+  });
+}
+
+/** Completes a password reset with the emailed code and the chosen new password. */
+export function confirmForgotPassword(
+  email: string,
+  code: string,
+  newPassword: string,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    new CognitoUser({ Username: email, Pool: pool() }).confirmPassword(code, newPassword, {
+      onSuccess: () => resolve(),
+      onFailure: (err: Error) => reject(err),
+    });
+  });
+}
+
 export function signIn(email: string, password: string): Promise<SignInResult> {
   return new Promise((resolve, reject) => {
     const cognitoUser = new CognitoUser({ Username: email, Pool: pool() });

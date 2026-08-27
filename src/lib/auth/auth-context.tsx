@@ -27,6 +27,10 @@ interface AuthContextValue {
   completeNewPassword: (newPassword: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   confirmSignUp: (email: string, code: string) => Promise<void>;
+  /** Sends a password-reset code to the given email. */
+  forgotPassword: (email: string) => Promise<void>;
+  /** Completes a password reset with the emailed code and a new password. */
+  confirmForgotPassword: (email: string, code: string, newPassword: string) => Promise<void>;
   signOut: () => Promise<void>;
   /** Returns a valid access token, transparently refreshing it if it's expired. */
   getAccessToken: () => Promise<string>;
@@ -101,6 +105,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const forgotPassword = useCallback((email: string) => cognito.forgotPassword(email), []);
+
+  const confirmForgotPassword = useCallback(
+    (email: string, code: string, newPassword: string) =>
+      cognito.confirmForgotPassword(email, code, newPassword),
+    [],
+  );
+
   const signOut = useCallback(async () => {
     await AsyncStorage.removeItem(STORAGE_KEY);
     setStatus({ state: 'signedOut' });
@@ -116,8 +128,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [status]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, signIn, completeNewPassword, signUp, confirmSignUp, signOut, getAccessToken }),
-    [status, signIn, completeNewPassword, signUp, confirmSignUp, signOut, getAccessToken],
+    () => ({
+      status,
+      signIn,
+      completeNewPassword,
+      signUp,
+      confirmSignUp,
+      forgotPassword,
+      confirmForgotPassword,
+      signOut,
+      getAccessToken,
+    }),
+    [
+      status,
+      signIn,
+      completeNewPassword,
+      signUp,
+      confirmSignUp,
+      forgotPassword,
+      confirmForgotPassword,
+      signOut,
+      getAccessToken,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
