@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -182,6 +182,7 @@ function scorersFor(events: MatchEvent[], side: MatchEvent['side']) {
 
 export default function MatchDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const getMatch = useCallback(() => repository.getMatch(String(id)), [id]);
   const { status, data, reload, refresh, isRefreshing } = useData(getMatch);
   const getSquad = useCallback(() => repository.getSquad(), []);
@@ -477,6 +478,11 @@ export default function MatchDetailScreen() {
         onSubmit={async (update) => {
           await repository.updateMatchScore(data.id, update);
           await refresh();
+        }}
+        onRemove={async () => {
+          await repository.removeMatch(data.id);
+          if (router.canGoBack()) router.back();
+          else router.replace('/');
         }}
       />
       <EditLineupModal

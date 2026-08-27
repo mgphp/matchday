@@ -19,8 +19,10 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
   `@react-native-async-storage/async-storage`
 - **Match centre** (`/match/[id]`) — score header, events timeline (goals,
   cards, substitutions) and lineups once teams are announced; "Edit match"
-  updates status and score; "Edit lineup" picks the starting XI from
-  the squad and sets a formation (e.g. "2-3-1")
+  updates status and score, and can **remove the fixture** (a two-step
+  in-modal confirm — deletes the match and its events); "Edit lineup" picks
+  the starting XI from the squad and sets a formation (e.g. "2-3-1"). The
+  fixtures list refreshes on return, so a deleted match drops off it
 - **Minutes played** — once a match is under way, the match centre lists the
   squad split into on-pitch and bench with live minutes per player, derived
   from the lineup, the substitutions and the clock (`src/lib/player-minutes.ts`)

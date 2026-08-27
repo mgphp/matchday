@@ -246,6 +246,16 @@ export const mockRepository: MatchdayRepository = {
     fixtures.push(match);
     return respond<MatchDetail>({ ...match, events: [] });
   },
+  removeMatch: (id) => {
+    const index = fixtures.findIndex((fixture) => fixture.id === id);
+    if (index === -1) return Promise.reject(new Error(`No match with id ${id}`));
+    fixtures.splice(index, 1);
+    delete events[id];
+    delete lineups[id];
+    delete formations[id];
+    delete availability[id];
+    return respond(undefined);
+  },
   updateMatchScore: (id, update: MatchScoreUpdate) => {
     const index = fixtures.findIndex((fixture) => fixture.id === id);
     if (index === -1) return Promise.reject(new Error(`No match with id ${id}`));

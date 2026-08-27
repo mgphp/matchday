@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import { RefreshControl, SectionList, View } from 'react-native';
 
 import { AddFixtureModal } from '@/components/add-fixture-modal';
@@ -53,6 +53,20 @@ export default function MatchesScreen() {
   const { teamId } = useFavouriteTeam();
   const ownTeam = useTeam();
   const [isAddingFixture, setIsAddingFixture] = useState(false);
+
+  // Pick up changes made on the match detail screen (a deleted fixture, an
+  // edited score) when coming back to the list. Skip the first focus — the
+  // initial load already fetched.
+  const isFirstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstFocus.current) {
+        isFirstFocus.current = false;
+        return;
+      }
+      refresh();
+    }, [refresh]),
+  );
 
   return (
     <Screen>

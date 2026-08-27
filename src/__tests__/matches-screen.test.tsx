@@ -6,6 +6,9 @@ import { TeamProvider } from '@/lib/team-context';
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),
+  // The screen's "refetch on return" wiring skips the first focus, so a
+  // no-op here leaves the initial-load tests untouched.
+  useFocusEffect: () => {},
 }));
 
 const ownTeam = { id: 'rovers', name: 'Northgate Rovers', shortName: 'NGR', clubId: 'club-1' };

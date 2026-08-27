@@ -137,6 +137,27 @@ describe('createHttpRepository', () => {
     });
   });
 
+  it('removeMatch DELETEs the match, with no body to parse', async () => {
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue({ ok: true, status: 204 } as Response);
+
+    const repo = createHttpRepository(options);
+    await repo.removeMatch('m2');
+
+    expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/teams/team-1/matches/m2', {
+      method: 'DELETE',
+      headers: { authorization: 'Bearer test-token' },
+    });
+  });
+
+  it('removeMatch throws when the API responds with a non-ok status', async () => {
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 404 } as Response);
+
+    const repo = createHttpRepository(options);
+    await expect(repo.removeMatch('gone')).rejects.toThrow('404');
+  });
+
   it('updateMatchScore PATCHes only the score/status fields', async () => {
     const update = { status: 'live' as const, homeScore: 1, awayScore: 0 };
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(

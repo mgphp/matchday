@@ -107,6 +107,16 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
       });
       return withVenue(match);
     },
+    removeMatch: async (id) => {
+      // No response body to parse — a plain fetch rather than `request`.
+      const token = await options.getAccessToken();
+      const path = `teams/${teamId}/matches/${id}`;
+      const res = await fetch(`${options.baseUrl}${path}`, {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`matchday-api ${path} failed: ${res.status}`);
+    },
     updateMatchScore: async (id, update: MatchScoreUpdate) => {
       const match = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`, {
         method: 'PATCH',

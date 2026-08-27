@@ -79,6 +79,8 @@ export interface MatchdayRepository {
   restorePlayer(player: Player): Promise<Player>;
   /** Creates a new fixture (id generated) and returns the full match detail. */
   createMatch(input: NewFixtureInput): Promise<MatchDetail>;
+  /** Deletes a fixture and everything hanging off it. Rejects when no match exists for the id. */
+  removeMatch(id: string): Promise<void>;
   /** Updates a match's score/status/minute. Rejects when no match exists for the id. */
   updateMatchScore(id: string, update: MatchScoreUpdate): Promise<MatchDetail>;
   /** Starts, pauses or ends the match clock. Rejects when no match exists for the id. */

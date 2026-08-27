@@ -75,6 +75,23 @@ describe('mockRepository', () => {
     expect(await mockRepository.getFixtures()).toHaveLength(beforeCount + 1);
   });
 
+  it('removeMatch deletes the fixture and its detail, and rejects an unknown id', async () => {
+    const created = await mockRepository.createMatch({
+      competition: 'League Cup',
+      kickoff: '2026-09-05T10:00:00Z',
+      venue: 'Bear Pit',
+      home: { id: 'rovers', name: 'Northgate Rovers', shortName: 'NGR' },
+      away: { id: 'opp-1', name: 'Rivals FC', shortName: 'RIV' },
+    });
+    const beforeCount = (await mockRepository.getFixtures()).length;
+
+    await mockRepository.removeMatch(created.id);
+
+    expect(await mockRepository.getFixtures()).toHaveLength(beforeCount - 1);
+    await expect(mockRepository.getMatch(created.id)).rejects.toThrow(/No match/);
+    await expect(mockRepository.removeMatch('nope')).rejects.toThrow(/No match/);
+  });
+
   it('updateMatchScore patches an existing match and rejects an unknown id', async () => {
     const updated = await mockRepository.updateMatchScore('m2', {
       status: 'live',
