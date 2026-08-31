@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CognitoUser } from 'amazon-cognito-identity-js';
 import {
   createContext,
@@ -12,8 +11,7 @@ import {
 
 import * as cognito from './cognito';
 import type { StoredTokens } from './cognito';
-
-const STORAGE_KEY = 'matchday:session';
+import { clearSession, loadSession, saveSession } from './session-store';
 
 export type AuthStatus =
   | { state: 'loading' }
@@ -39,7 +37,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 async function persist(tokens: StoredTokens): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(tokens));
+  await saveSession(tokens);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -47,21 +45,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    AsyncStorage.getItem(STORAGE_KEY).then(async (raw) => {
-      if (!raw) {
+    loadSession().then(async (tokens) => {
+      if (!tokens) {
         if (!cancelled) setStatus({ state: 'signedOut' });
         return;
       }
-      const tokens = JSON.parse(raw) as StoredTokens;
+      if (!cognito.isExpired(tokens.accessToken)) {
+        if (!cancelled) setStatus({ state: 'signedIn', tokens });
+        return;
+      }
       try {
-        const fresh = cognito.isExpired(tokens.accessToken)
-          ? await cognito.refreshSession(tokens.email, tokens.refreshToken)
-          : tokens;
+        const fresh = await cognito.refreshSession(tokens.email, tokens.refreshToken);
         await persist(fresh);
         if (!cancelled) setStatus({ state: 'signedIn', tokens: fresh });
-      } catch {
-        await AsyncStorage.removeItem(STORAGE_KEY);
-        if (!cancelled) setStatus({ state: 'signedOut' });
+      } catch (err) {
+        if (cognito.isAuthError(err)) {
+          await clearSession();
+          if (!cancelled) setStatus({ state: 'signedOut' });
+        } else if (!cancelled) {
+          // Transient failure (e.g. offline). Keep the coach signed in with the
+          // stored tokens; getAccessToken refreshes once connectivity is back.
+          setStatus({ state: 'signedIn', tokens });
+        }
       }
     });
     return () => {
@@ -114,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
-    await AsyncStorage.removeItem(STORAGE_KEY);
+    await clearSession();
     setStatus({ state: 'signedOut' });
   }, []);
 
