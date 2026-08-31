@@ -106,6 +106,22 @@ export function completeNewPassword(
   });
 }
 
+/**
+ * True when an error from `refreshSession` means the refresh token itself is no
+ * longer usable (expired or revoked), so the stored session should be dropped.
+ * Everything else — notably network failures — is transient: keep the session
+ * and retry later rather than forcing the coach to sign in again.
+ */
+export function isAuthError(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false;
+  const code = (err as { code?: string; name?: string }).code ?? (err as { name?: string }).name;
+  return (
+    code === 'NotAuthorizedException' ||
+    code === 'UserNotFoundException' ||
+    code === 'PasswordResetRequiredException'
+  );
+}
+
 export function refreshSession(email: string, refreshToken: string): Promise<StoredTokens> {
   return new Promise((resolve, reject) => {
     const cognitoUser = new CognitoUser({ Username: email, Pool: pool() });

@@ -86,7 +86,11 @@ EXPO_PUBLIC_COGNITO_USER_POOL_ID=<region>_xxxxxxxxx
 EXPO_PUBLIC_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-Coaches sign in (or register) on first launch — see `src/components/auth/`. A "Forgot password?"
+Coaches sign in (or register) on first launch — see `src/components/auth/`. The session is
+kept in the device keychain (`expo-secure-store`, via `src/lib/auth/session-store.ts`) and
+restored on every launch, so a registered coach isn't asked for their password again; a
+transient failure while refreshing the token keeps the coach signed in rather than bouncing
+them to the login screen. A "Forgot password?"
 link on the sign-in screen runs the Cognito reset flow: request a one-time code by email, then
 set a new password with it. Cognito auth pulls
 in a native crypto polyfill (`react-native-get-random-values`), so **Expo Go can't run this app**;
@@ -140,7 +144,7 @@ matchday
 │   │   ├── Screen, Card, Button, Badge, MatchCard, SkeletonCard, TextField, StateView
 │   │   └── __tests__
 │   ├── lib
-│   │   ├── auth       # Cognito wrapper (cognito.ts) + AuthProvider/useAuth (auth-context.tsx)
+│   │   ├── auth       # Cognito wrapper (cognito.ts) + AuthProvider/useAuth (auth-context.tsx) + session-store.ts (keychain)
 │   │   ├── data       # repository interface (incl. addPlayer), mock + HttpRepository, swap point (index.ts)
 │   │   ├── coach-api.ts # club/coach/team management endpoints (registration, onboarding)
 │   │   ├── types.ts   # domain models (Match, Standing, Player)
