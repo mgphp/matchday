@@ -3,6 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { ChoiceChips } from '@/components/choice-chips';
+import { DatePicker } from '@/components/date-picker';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { TextField } from '@/components/text-field';
@@ -133,12 +134,7 @@ export function AddFixtureModal({
           autoCapitalize="characters"
         />
         <TextField label="Competition" value={competition} onChangeText={setCompetition} />
-        <TextField
-          label="Date (YYYY-MM-DD)"
-          value={date}
-          onChangeText={setDate}
-          placeholder="2026-09-05"
-        />
+        <DatePicker label="Date" value={date} onChange={setDate} />
         <TextField
           label="Kick-off time (HH:MM)"
           value={time}
