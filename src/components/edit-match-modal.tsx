@@ -6,7 +6,7 @@ import { ChoiceChips } from '@/components/choice-chips';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { TextField } from '@/components/text-field';
-import type { MatchScoreUpdate } from '@/lib/data/repository';
+import { ApiError, type MatchScoreUpdate } from '@/lib/data/repository';
 import { DEFAULT_DURATION_MINUTES } from '@/lib/rotation';
 import type { Match, MatchStatus } from '@/lib/types';
 import { colors, spacing, typography } from '@/theme/theme';
@@ -18,6 +18,26 @@ const STATUS_LABELS: Record<MatchStatus, string> = {
   finished: 'Finished',
   postponed: 'Postponed',
 };
+
+/** Says what went wrong removing a fixture, and what the coach can do about it. */
+export function removeErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 401 || error.status === 403) {
+      return 'Your session has expired. Sign out and back in, then try again.';
+    }
+    if (error.status === 404) {
+      return 'The server can\u2019t remove fixtures yet \u2014 matchday-api needs deploying.';
+    }
+    if (error.status >= 500) {
+      return `The server hit a problem (${error.status}). Try again in a moment.`;
+    }
+  }
+  // fetch rejects with a TypeError when the request never reached the server.
+  if (error instanceof TypeError) {
+    return 'Couldn\u2019t reach the server. Check your connection and try again.';
+  }
+  return 'Could not remove the match. Try again.';
+}
 
 function hasScore(status: MatchStatus) {
   return status === 'live' || status === 'finished';
@@ -76,8 +96,8 @@ export function EditMatchModal({
     setIsRemoving(true);
     try {
       await onRemove();
-    } catch {
-      setError('Could not remove the match. Try again.');
+    } catch (removeError) {
+      setError(removeErrorMessage(removeError));
       setIsRemoving(false);
       setConfirmingRemove(false);
     }

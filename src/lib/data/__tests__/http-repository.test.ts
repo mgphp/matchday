@@ -1,6 +1,7 @@
 import type { Player } from '@/lib/types';
 
 import { createHttpRepository } from '../http-repository';
+import { ApiError } from '../repository';
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return {
@@ -151,11 +152,40 @@ describe('createHttpRepository', () => {
     });
   });
 
-  it('removeMatch throws when the API responds with a non-ok status', async () => {
-    jest.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 404 } as Response);
+  it('removeMatch throws an ApiError carrying the status on a non-ok response', async () => {
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({}, false, 500));
 
     const repo = createHttpRepository(options);
-    await expect(repo.removeMatch('gone')).rejects.toThrow('404');
+    const error = await repo.removeMatch('m2').catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(500);
+    expect((error as ApiError).message).toContain('500');
+  });
+
+  // Regression for #59: an API deployed before the DELETE route existed
+  // answers with the router's plain-text 404, which must not look like success.
+  it('removeMatch throws a 404 ApiError when the API has no DELETE route', async () => {
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => {
+        throw new SyntaxError('Unexpected token N in JSON');
+      },
+    } as unknown as Response);
+
+    const repo = createHttpRepository(options);
+    const error = await repo.removeMatch('m2').catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(404);
+  });
+
+  it('removeMatch resolves when the API says the match is already gone', async () => {
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(jsonResponse({ error: 'match not found' }, false, 404));
+
+    const repo = createHttpRepository(options);
+    await expect(repo.removeMatch('gone')).resolves.toBeUndefined();
   });
 
   it('updateMatchScore PATCHes only the score/status fields', async () => {

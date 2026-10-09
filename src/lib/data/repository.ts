@@ -57,6 +57,20 @@ export interface LineupUpdate {
  * Data source contract for the app. Screens depend on this interface only,
  * so the mock implementation can be swapped for a real API without UI changes.
  */
+/**
+ * A request the backend answered with a non-2xx status. Carries the status so
+ * a screen can say what actually went wrong instead of a generic "try again".
+ */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 export interface MatchdayRepository {
   getFixtures(): Promise<Match[]>;
   /** Rejects when no match exists for the id. */
@@ -79,7 +93,10 @@ export interface MatchdayRepository {
   restorePlayer(player: Player): Promise<Player>;
   /** Creates a new fixture (id generated) and returns the full match detail. */
   createMatch(input: NewFixtureInput): Promise<MatchDetail>;
-  /** Deletes a fixture and everything hanging off it. Rejects when no match exists for the id. */
+  /**
+   * Deletes a fixture and everything hanging off it. Rejects when no match
+   * exists for the id; over HTTP a fixture that is already gone resolves.
+   */
   removeMatch(id: string): Promise<void>;
   /** Updates a match's score/status/minute. Rejects when no match exists for the id. */
   updateMatchScore(id: string, update: MatchScoreUpdate): Promise<MatchDetail>;
