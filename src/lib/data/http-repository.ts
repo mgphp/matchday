@@ -44,9 +44,22 @@ async function isMatchNotFound(res: Response): Promise<boolean> {
   }
 }
 
-/** matchday-api's Match type doesn't carry a venue field yet — default it until that lands. */
-function withVenue<T extends { venue?: string }>(match: T): T & { venue: string } {
-  return { ...match, venue: match.venue ?? '' };
+/**
+ * Tidies a match as the API returns it into the shape the app expects.
+ *
+ * - `venue`: matchday-api's Match type doesn't carry it yet — default it.
+ * - `availablePlayerIds`: the app clears it by PATCHing `null`, and the API
+ *   stores that literally, so it comes back as `null` rather than absent.
+ *   The app's "everyone is available" is `undefined`.
+ */
+function normaliseMatch<T extends { venue?: string; availablePlayerIds?: string[] | null }>(
+  match: T,
+): Omit<T, 'venue' | 'availablePlayerIds'> & { venue: string; availablePlayerIds?: string[] } {
+  return {
+    ...match,
+    venue: match.venue ?? '',
+    availablePlayerIds: match.availablePlayerIds ?? undefined,
+  };
 }
 
 /** Not cryptographically unique — fine for a client-generated squad entry id. */
@@ -65,11 +78,11 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
   return {
     getFixtures: async () => {
       const matches = await request<Match[]>(options, `teams/${teamId}/fixtures`);
-      return matches.map(withVenue);
+      return matches.map(normaliseMatch);
     },
     getMatch: async (id) => {
       const match = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`);
-      return withVenue(match);
+      return normaliseMatch(match);
     },
     getTable: () => request<Standing[]>(options, `teams/${teamId}/table`),
     getSquad: () => request<Player[]>(options, `teams/${teamId}/squad`),
@@ -116,7 +129,7 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
         // part of its declared Match type yet.
         body: { ...input, status: 'scheduled' },
       });
-      return withVenue(match);
+      return normaliseMatch(match);
     },
     removeMatch: async (id) => {
       // No response body to parse — a plain fetch rather than `request`.
@@ -139,7 +152,7 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
         method: 'PATCH',
         body: update,
       });
-      return withVenue(match);
+      return normaliseMatch(match);
     },
     updateMatchClock: async (id, update: MatchClockUpdate) => {
       const match = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`, {
@@ -149,7 +162,7 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
         // clears the legacy value so it can't shadow the derived clock.
         body: { ...update, minute: null },
       });
-      return withVenue(match);
+      return normaliseMatch(match);
     },
     addEvent: async (id, event: NewMatchEvent) => {
       // Same shape as updateLineup: the API's PATCH replaces `events` rather
@@ -163,7 +176,7 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
         method: 'PATCH',
         body: { events },
       });
-      return withVenue(match);
+      return normaliseMatch(match);
     },
     updateLineup: async (id, update: LineupUpdate) => {
       // The API replaces the whole `lineups` object on PATCH (no deep merge),
@@ -177,7 +190,7 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
       };
       const match = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`, {
         method: 'PATCH',
-        // `formation` round-trips the same way `venue` does — see withVenue above.
+        // `formation` round-trips the same way `venue` does — see normaliseMatch above.
         // `homeSlots`/`awaySlots` round-trip the same way, as undeclared fields.
         // `availablePlayerIds: null` clears it, so unticking everyone back to
         // "whole squad available" actually sticks rather than leaving a stale list.
@@ -187,7 +200,7 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
           availablePlayerIds: update.availablePlayerIds ?? null,
         },
       });
-      return withVenue(match);
+      return normaliseMatch(match);
     },
   };
 }

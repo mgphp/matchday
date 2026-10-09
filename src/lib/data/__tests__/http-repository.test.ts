@@ -1,3 +1,4 @@
+import { isAvailable } from '@/lib/availability';
 import type { Player } from '@/lib/types';
 
 import { createHttpRepository } from '../http-repository';
@@ -136,6 +137,31 @@ describe('createHttpRepository', () => {
       headers: { authorization: 'Bearer test-token', 'content-type': 'application/json' },
       body: JSON.stringify({ ...input, status: 'scheduled' }),
     });
+  });
+
+  // Regression: clearing availability PATCHes `null`, which the API stores and
+  // returns as-is — that crashed the match screen on `null.includes`.
+  it('reads a null availablePlayerIds back as "everyone available"', async () => {
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(jsonResponse({ id: 'm1', venue: 'Bear Pit', availablePlayerIds: null }));
+
+    const repo = createHttpRepository(options);
+    const match = await repo.getMatch('m1');
+
+    expect(match.availablePlayerIds).toBeUndefined();
+    expect(isAvailable(match, 'p1')).toBe(true);
+  });
+
+  it('keeps an explicit availablePlayerIds list', async () => {
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(jsonResponse({ id: 'm1', availablePlayerIds: ['p2'] }));
+
+    const repo = createHttpRepository(options);
+    const match = await repo.getMatch('m1');
+
+    expect(match.availablePlayerIds).toEqual(['p2']);
   });
 
   it('removeMatch DELETEs the match, with no body to parse', async () => {
