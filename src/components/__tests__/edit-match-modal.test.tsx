@@ -1,5 +1,6 @@
 import { render, userEvent } from '@testing-library/react-native';
 
+import { ApiError } from '@/lib/data/repository';
 import type { Match } from '@/lib/types';
 
 import { EditMatchModal } from '../edit-match-modal';
@@ -227,5 +228,29 @@ describe('EditMatchModal', () => {
 
     expect(await findByText('Remove fixture')).toBeTruthy();
     expect(onRemove).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [new ApiError('failed: 404', 404), /matchday-api needs deploying/],
+    [new ApiError('failed: 401', 401), /session has expired/],
+    [new ApiError('failed: 502', 502), /server hit a problem \(502\)/],
+    [new TypeError('Network request failed'), /Check your connection/],
+    [new Error('boom'), /Could not remove the match/],
+  ])('explains why removing failed (%s) and resets the confirm', async (failure, message) => {
+    const { getByText, findByText } = await render(
+      <EditMatchModal
+        visible
+        onClose={jest.fn()}
+        match={scheduledMatch}
+        onSubmit={jest.fn()}
+        onRemove={jest.fn().mockRejectedValue(failure)}
+      />,
+    );
+
+    await userEvent.press(getByText('Remove fixture'));
+    await userEvent.press(getByText('Delete fixture'));
+
+    expect(await findByText(message)).toBeTruthy();
+    expect(getByText('Remove fixture')).toBeTruthy();
   });
 });

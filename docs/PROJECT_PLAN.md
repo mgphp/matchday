@@ -568,6 +568,24 @@ but never deleted.
       `http-repository` (DELETE shape + non-ok throws), `edit-match-modal`
       (confirm flow, cancel), `match-detail-screen` (remove navigates back).
 
+### M15 — Actionable remove-fixture errors ([#59](https://github.com/mgphp/matchday/issues/59))
+
+Removing a fixture failed with only "Could not remove the match. Try again."
+Root cause was outside this repo: `matchday-api`'s Deploy workflow has failed
+on every run (OIDC `AssumeRoleWithWebIdentity` denied), so the live Lambda
+predates the `DELETE` route and answers it with the router's 404. **Removal
+only works once `matchday-api` `main` is deployed.**
+
+- [x] `ApiError` (in `repository.ts`) carries the HTTP status; `removeMatch`
+      throws it instead of a bare `Error`.
+- [x] `removeMatch` treats the API's own JSON 404 (`match not found`) as
+      already removed and resolves; an unrouted 404 still throws.
+- [x] `EditMatchModal` maps the failure to a specific message — session
+      expired (401/403), API missing the route (404), server error (5xx),
+      offline (`TypeError`) — falling back to the generic one.
+- [x] Tests: `http-repository` (status on `ApiError`, unrouted 404 regression,
+      already-gone resolves), `edit-match-modal` (one case per message).
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)
