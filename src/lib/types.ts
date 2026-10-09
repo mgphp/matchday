@@ -74,7 +74,13 @@ export type PlayerPosition = 'GK' | 'DF' | 'MF' | 'FW';
 export interface Player {
   id: string;
   name: string;
+  /** Main position — where they are listed and placed first. */
   position: PlayerPosition;
+  /**
+   * Every position they can play, main first. Absent for a single-position
+   * player — read through `playerPositions` rather than directly.
+   */
+  positions?: PlayerPosition[];
   squadNumber: number;
 }
 

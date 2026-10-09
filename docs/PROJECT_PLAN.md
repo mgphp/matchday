@@ -568,6 +568,27 @@ but never deleted.
       `http-repository` (DELETE shape + non-ok throws), `edit-match-modal`
       (confirm flow, cancel), `match-detail-screen` (remove navigates back).
 
+### M16 — Multiple positions per player
+
+A junior squad moves around: one position per player was too rigid.
+
+- [x] `Player.positions?: PlayerPosition[]` — every position, main first.
+      `position` stays as the main one, so existing squads and saved lineups
+      need no migration, and `matchday-api` needs no change (it stores the
+      squad array as sent). Single-position players are saved without
+      `positions`.
+- [x] `src/lib/positions.ts` — `playerPositions` / `canPlay` /
+      `positionsLabel` / `positionFields`, the only code that reads both
+      shapes.
+- [x] `PositionPicker` — multi-select chips shared by Add player and Edit
+      player; first pick is the main position, at least one required.
+- [x] Squad: a player is listed once under their main position, badge and
+      accessibility label show them all ("DF/MF").
+- [x] Lineup: a slot's picker offers anyone who can play there; auto-placement
+      fills main-position fits first, then secondary ones. Substitution and
+      lineup rows show all positions.
+- [x] Tests: `positions`, `position-picker`, both player modals,
+      `edit-lineup-modal` (secondary position offered), `squad-screen`.
 ### M15 — Date picker for new fixtures
 
 Typing a fixture date as `YYYY-MM-DD` was error-prone on a phone.

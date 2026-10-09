@@ -2,37 +2,13 @@ import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { PositionPicker } from '@/components/position-picker';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { TextField } from '@/components/text-field';
+import { positionFields } from '@/lib/positions';
 import type { Player, PlayerPosition } from '@/lib/types';
-import { colors, radii, spacing, typography } from '@/theme/theme';
-
-const POSITIONS: PlayerPosition[] = ['GK', 'DF', 'MF', 'FW'];
-
-function PositionOption({
-  position,
-  selected,
-  onPress,
-}: {
-  position: PlayerPosition;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      accessibilityLabel={position}
-      onPress={onPress}
-      style={[styles.positionOption, selected && styles.positionOptionSelected]}
-    >
-      <Text style={[styles.positionLabel, selected && styles.positionLabelSelected]}>
-        {position}
-      </Text>
-    </Pressable>
-  );
-}
+import { colors, typography } from '@/theme/theme';
 
 export function AddPlayerModal({
   visible,
@@ -44,7 +20,7 @@ export function AddPlayerModal({
   onSubmit: (player: Omit<Player, 'id'>) => Promise<void>;
 }) {
   const [name, setName] = useState('');
-  const [position, setPosition] = useState<PlayerPosition | null>(null);
+  const [positions, setPositions] = useState<PlayerPosition[]>([]);
   const [squadNumber, setSquadNumber] = useState('');
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,14 +28,14 @@ export function AddPlayerModal({
   const parsedNumber = Number(squadNumber);
   const isComplete =
     name.trim().length > 0 &&
-    position !== null &&
+    positions.length > 0 &&
     squadNumber.length > 0 &&
     Number.isInteger(parsedNumber) &&
     parsedNumber > 0;
 
   const reset = () => {
     setName('');
-    setPosition(null);
+    setPositions([]);
     setSquadNumber('');
     setError(undefined);
   };
@@ -70,11 +46,15 @@ export function AddPlayerModal({
   };
 
   const handleSubmit = async () => {
-    if (!position) return;
+    if (positions.length === 0) return;
     setError(undefined);
     setIsSubmitting(true);
     try {
-      await onSubmit({ name: name.trim(), position, squadNumber: parsedNumber });
+      await onSubmit({
+        name: name.trim(),
+        ...positionFields(positions),
+        squadNumber: parsedNumber,
+      });
       reset();
       onClose();
     } catch {
@@ -99,19 +79,7 @@ export function AddPlayerModal({
           </Pressable>
         </View>
         <TextField label="Name" value={name} onChangeText={setName} textContentType="name" />
-        <View style={styles.positionGroup}>
-          <Text style={styles.positionGroupLabel}>Position</Text>
-          <View style={styles.positionOptions}>
-            {POSITIONS.map((option) => (
-              <PositionOption
-                key={option}
-                position={option}
-                selected={position === option}
-                onPress={() => setPosition(option)}
-              />
-            ))}
-          </View>
-        </View>
+        <PositionPicker value={positions} onChange={setPositions} />
         <TextField
           label="Squad number"
           value={squadNumber}
@@ -137,40 +105,6 @@ const styles = StyleSheet.create({
   },
   close: {
     ...typography.body,
-    color: colors.accent,
-  },
-  positionGroup: {
-    gap: spacing.xs,
-  },
-  positionGroupLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    fontWeight: '600',
-  },
-  positionOptions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  positionOption: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-    borderRadius: radii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceRaised,
-  },
-  positionOptionSelected: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accentMuted,
-  },
-  positionLabel: {
-    ...typography.body,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  positionLabelSelected: {
     color: colors.accent,
   },
   error: {

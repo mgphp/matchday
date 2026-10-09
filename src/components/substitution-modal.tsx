@@ -9,6 +9,7 @@ import { TextField } from '@/components/text-field';
 import { repository } from '@/lib/data';
 import type { NewMatchEvent } from '@/lib/data/repository';
 import { playersOnBench, playersOnPitch } from '@/lib/lineup-state';
+import { positionsLabel } from '@/lib/positions';
 import type { MatchDetail, Player } from '@/lib/types';
 import { colors, radii, spacing, typography } from '@/theme/theme';
 
@@ -28,7 +29,7 @@ function PlayerRow({
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      accessibilityLabel={`${direction === 'off' ? 'Take off' : 'Bring on'} ${player.squadNumber} ${player.name}, ${player.position}`}
+      accessibilityLabel={`${direction === 'off' ? 'Take off' : 'Bring on'} ${player.squadNumber} ${player.name}, ${positionsLabel(player)}`}
       onPress={onPress}
       style={[styles.playerRow, selected && styles.playerRowSelected]}
     >
@@ -36,7 +37,7 @@ function PlayerRow({
         {player.squadNumber}
       </Text>
       <Text style={[styles.playerName, selected && styles.playerTextSelected]}>{player.name}</Text>
-      <Text style={styles.playerPosition}>{player.position}</Text>
+      <Text style={styles.playerPosition}>{positionsLabel(player)}</Text>
     </Pressable>
   );
 }

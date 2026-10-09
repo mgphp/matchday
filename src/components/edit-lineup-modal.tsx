@@ -9,6 +9,7 @@ import { StateView } from '@/components/state-view';
 import { repository } from '@/lib/data';
 import type { LineupUpdate } from '@/lib/data/repository';
 import { buildSlots, type Group, type Slot } from '@/lib/pitch-slots';
+import { canPlay, positionsLabel } from '@/lib/positions';
 import type { MatchDetail, Player } from '@/lib/types';
 import { colors, radii, spacing, typography } from '@/theme/theme';
 
@@ -71,19 +72,26 @@ function mostBalanced(options: string[]): string {
 }
 
 /**
- * Greedily places players into slots matching their squad position. Slot
+ * Greedily places players into slots matching a position they play. Slot
  * identity within a group is arbitrary (defenders are interchangeable), so
  * this is all the "memory" a lineup needs — no positional metadata to store.
  */
 function placeByPosition(players: Player[], slots: Slot[]): Record<string, Player> {
   const assignments: Record<string, Player> = {};
   const remaining = [...players];
-  for (const slot of slots) {
-    const index = remaining.findIndex((player) => player.position === slot.group);
-    if (index === -1) continue;
-    assignments[slot.id] = remaining[index];
-    remaining.splice(index, 1);
-  }
+  const fill = (matches: (player: Player, slot: Slot) => boolean) => {
+    for (const slot of slots) {
+      if (assignments[slot.id]) continue;
+      const index = remaining.findIndex((player) => matches(player, slot));
+      if (index === -1) continue;
+      assignments[slot.id] = remaining[index];
+      remaining.splice(index, 1);
+    }
+  };
+  // Main positions first, so a DF/MF only covers midfield once every slot
+  // that wants a natural fit has had the chance to take one.
+  fill((player, slot) => player.position === slot.group);
+  fill((player, slot) => canPlay(player, slot.group));
   return assignments;
 }
 
@@ -277,7 +285,7 @@ export function EditLineupModal({
   const substitutes = (squad ?? []).filter((player) => !assignedIds.has(player.id));
   const eligibleForPicker = pickerSlot
     ? (squad ?? []).filter(
-        (player) => player.position === pickerSlot.group && !assignedIds.has(player.id),
+        (player) => canPlay(player, pickerSlot.group) && !assignedIds.has(player.id),
       )
     : [];
 
@@ -465,14 +473,14 @@ export function EditLineupModal({
                             key={player.id}
                             accessibilityRole="button"
                             accessibilityState={{ selected: !missing }}
-                            accessibilityLabel={`${player.squadNumber} ${player.name}, ${player.position}, ${
+                            accessibilityLabel={`${player.squadNumber} ${player.name}, ${positionsLabel(player)}, ${
                               missing ? 'not available' : 'available'
                             }`}
                             onPress={() => toggleAvailability(player.id)}
                             style={styles.subRowPressable}
                           >
                             <Text style={[styles.subRow, missing && styles.subRowUnavailable]}>
-                              {player.squadNumber} {player.name} · {player.position}
+                              {player.squadNumber} {player.name} · {positionsLabel(player)}
                             </Text>
                             {missing ? <Text style={styles.subRowTag}>not available</Text> : null}
                           </Pressable>

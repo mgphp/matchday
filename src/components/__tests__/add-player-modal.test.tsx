@@ -36,6 +36,26 @@ describe('AddPlayerModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('submits several positions with the first pick as the main one', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined);
+    const { getByLabelText, getByText } = await render(
+      <AddPlayerModal visible onClose={jest.fn()} onSubmit={onSubmit} />,
+    );
+
+    await userEvent.type(getByLabelText('Name'), 'Theo Banks');
+    await userEvent.press(getByLabelText('MF'));
+    await userEvent.press(getByLabelText('DF'));
+    await userEvent.type(getByLabelText('Squad number'), '8');
+    await userEvent.press(getByText('Add'));
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      name: 'Theo Banks',
+      position: 'MF',
+      positions: ['MF', 'DF'],
+      squadNumber: 8,
+    });
+  });
+
   it('shows an error and stays open when submitting fails', async () => {
     const onSubmit = jest.fn().mockRejectedValue(new Error('nope'));
     const onClose = jest.fn();
