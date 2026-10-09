@@ -2,14 +2,13 @@ import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { ChoiceChips } from '@/components/choice-chips';
+import { PositionPicker } from '@/components/position-picker';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { TextField } from '@/components/text-field';
+import { playerPositions, positionFields } from '@/lib/positions';
 import type { Player, PlayerPosition } from '@/lib/types';
 import { colors, typography } from '@/theme/theme';
-
-const POSITIONS: PlayerPosition[] = ['GK', 'DF', 'MF', 'FW'];
 
 export function EditPlayerModal({
   visible,
@@ -25,7 +24,7 @@ export function EditPlayerModal({
   onRemove: () => Promise<void>;
 }) {
   const [name, setName] = useState(player.name);
-  const [position, setPosition] = useState<PlayerPosition>(player.position);
+  const [positions, setPositions] = useState<PlayerPosition[]>(() => playerPositions(player));
   const [squadNumber, setSquadNumber] = useState(player.squadNumber.toString());
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,6 +33,7 @@ export function EditPlayerModal({
   const parsedNumber = Number(squadNumber);
   const isComplete =
     name.trim().length > 0 &&
+    positions.length > 0 &&
     squadNumber.length > 0 &&
     Number.isInteger(parsedNumber) &&
     parsedNumber > 0;
@@ -48,7 +48,12 @@ export function EditPlayerModal({
     setError(undefined);
     setIsSubmitting(true);
     try {
-      await onSubmit({ id: player.id, name: name.trim(), position, squadNumber: parsedNumber });
+      await onSubmit({
+        id: player.id,
+        name: name.trim(),
+        ...positionFields(positions),
+        squadNumber: parsedNumber,
+      });
       onClose();
     } catch {
       setError('Could not save the player. Try again.');
@@ -90,7 +95,7 @@ export function EditPlayerModal({
           </Pressable>
         </View>
         <TextField label="Name" value={name} onChangeText={setName} textContentType="name" />
-        <ChoiceChips label="Position" options={POSITIONS} value={position} onChange={setPosition} />
+        <PositionPicker value={positions} onChange={setPositions} />
         <TextField
           label="Squad number"
           value={squadNumber}

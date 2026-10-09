@@ -117,6 +117,29 @@ describe('EditLineupModal', () => {
     expect(queryByText('Jamie Cole')).toBeNull();
   });
 
+  it('offers a player for any position they play, not just their main one', async () => {
+    mockGetSquad.mockResolvedValue([
+      ...squad.slice(0, 3),
+      { ...squad[3], positions: ['MF' as const, 'DF' as const] },
+      squad[4],
+    ]);
+    const { findAllByLabelText, getByText, queryByText } = await render(
+      <EditLineupModal
+        visible
+        onClose={jest.fn()}
+        match={match}
+        side="home"
+        onSubmit={jest.fn()}
+      />,
+    );
+
+    const [firstDfSlot] = await findAllByLabelText('Add a DF to this position');
+    await userEvent.press(firstDfSlot);
+
+    expect(getByText('Theo Banks')).toBeTruthy();
+    expect(queryByText('Jamie Cole')).toBeNull();
+  });
+
   it('assigns a player to a slot, removing them from the substitutes', async () => {
     const { findAllByLabelText, getByText, findByText, findByLabelText, queryByText } =
       await render(

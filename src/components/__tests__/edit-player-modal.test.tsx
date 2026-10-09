@@ -44,10 +44,66 @@ describe('EditPlayerModal', () => {
     expect(onSubmit).toHaveBeenCalledWith({
       id: 'p1',
       name: 'Sam O.',
-      position: 'DF',
+      position: 'GK',
+      positions: ['GK', 'DF'],
       squadNumber: 1,
     });
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('pre-selects every position of a multi-position player', async () => {
+    const { getByLabelText } = await render(
+      <EditPlayerModal
+        visible
+        player={{ ...player, position: 'DF', positions: ['DF', 'MF'] }}
+        onClose={jest.fn()}
+        onSubmit={jest.fn()}
+        onRemove={jest.fn()}
+      />,
+    );
+
+    expect(getByLabelText('DF').props.accessibilityState.selected).toBe(true);
+    expect(getByLabelText('MF').props.accessibilityState.selected).toBe(true);
+    expect(getByLabelText('GK').props.accessibilityState.selected).toBe(false);
+  });
+
+  it('swaps the main position, dropping positions when one is left', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined);
+    const { getByLabelText, getByText } = await render(
+      <EditPlayerModal
+        visible
+        player={{ ...player, positions: ['GK', 'DF'] }}
+        onClose={jest.fn()}
+        onSubmit={onSubmit}
+        onRemove={jest.fn()}
+      />,
+    );
+
+    await userEvent.press(getByLabelText('GK'));
+    await userEvent.press(getByText('Save'));
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      id: 'p1',
+      name: 'Sam Okafor',
+      position: 'DF',
+      squadNumber: 1,
+    });
+  });
+
+  it('cannot save a player with no position', async () => {
+    const { getByLabelText, getByText } = await render(
+      <EditPlayerModal
+        visible
+        player={player}
+        onClose={jest.fn()}
+        onSubmit={jest.fn()}
+        onRemove={jest.fn()}
+      />,
+    );
+
+    await userEvent.press(getByLabelText('GK'));
+
+    expect(getByText('Save')).toBeDisabled();
   });
 
   it('removes the player only after a second confirming press', async () => {

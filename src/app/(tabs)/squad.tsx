@@ -11,6 +11,7 @@ import { SectionHeader } from '@/components/section-header';
 import { StateView } from '@/components/state-view';
 import { UndoBanner } from '@/components/undo-banner';
 import { repository } from '@/lib/data';
+import { playerPositions, positionsLabel } from '@/lib/positions';
 import type { Player, PlayerPosition } from '@/lib/types';
 import { useData } from '@/lib/use-data';
 import { colors, spacing, typography } from '@/theme/theme';
@@ -33,7 +34,10 @@ function groupByPosition(players: Player[]) {
 }
 
 function PlayerRow({ player, onPress }: { player: Player; onPress: () => void }) {
-  const position = POSITION_LABELS[player.position].replace(/s$/, '');
+  // Listed once, under their main position; the row names everything they play.
+  const position = playerPositions(player)
+    .map((code) => POSITION_LABELS[code].replace(/s$/, ''))
+    .join(' and ');
 
   return (
     <Pressable
@@ -44,7 +48,7 @@ function PlayerRow({ player, onPress }: { player: Player; onPress: () => void })
     >
       <Text style={styles.number}>{player.squadNumber}</Text>
       <Text style={styles.name}>{player.name}</Text>
-      <Badge label={player.position} />
+      <Badge label={positionsLabel(player)} />
     </Pressable>
   );
 }

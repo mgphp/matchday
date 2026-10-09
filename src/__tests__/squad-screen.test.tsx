@@ -50,6 +50,18 @@ describe('SquadScreen', () => {
     expect(await findByLabelText('Number 9, Test Striker, Forward')).toBeTruthy();
   });
 
+  it('lists a multi-position player once, under their main position, naming them all', async () => {
+    mockGetSquad.mockResolvedValueOnce([
+      { id: 'p3', name: 'Test Utility', position: 'DF', positions: ['DF', 'MF'], squadNumber: 4 },
+    ]);
+    const { findByLabelText, getByText, queryByText } = await render(<SquadScreen />);
+
+    expect(await findByLabelText('Number 4, Test Utility, Defender and Midfielder')).toBeTruthy();
+    expect(getByText('Defenders')).toBeTruthy();
+    expect(queryByText('Midfielders')).toBeNull();
+    expect(getByText('DF/MF')).toBeTruthy();
+  });
+
   it('opens the add-player modal, submits, and reloads the squad', async () => {
     mockAddPlayer.mockResolvedValue({ id: 'p3', name: 'New Kid', position: 'MF', squadNumber: 8 });
     const { findByText, getByText, getByLabelText } = await render(<SquadScreen />);

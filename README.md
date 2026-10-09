@@ -9,7 +9,9 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
   state while fixtures load; "Add fixture" creates a new match against the
   coach's own team, warning (but not blocking) if a kickoff lands within two
   hours of a fixture already in the diary
-- **Squad** — players grouped under GK/DF/MF/FW section headers; "Add player"
+- **Squad** — players grouped under GK/DF/MF/FW section headers by main
+  position; a player can have several positions (first pick is the main one)
+  and is offered for any of them when picking a lineup. "Add player"
   and tapping a row to edit or remove them. A removal can be undone from a
   banner for 8 seconds, restoring the player's original id
 - **Table** — full league standings with promotion/relegation zone
@@ -136,7 +138,7 @@ matchday
 │   │   └── match/[id].tsx # match centre (events, lineups, live polling)
 │   ├── components
 │   │   ├── auth       # AuthGate + login/register/onboarding screens (coach auth flow)
-│   │   ├── add-player-modal.tsx # squad write path — name/position/number form
+│   │   ├── add-player-modal.tsx # squad write path — name/positions/number form
 │   │   ├── Screen, Card, Button, Badge, MatchCard, SkeletonCard, TextField, StateView
 │   │   └── __tests__
 │   ├── lib
