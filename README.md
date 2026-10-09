@@ -22,7 +22,9 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
   updates status and score, and can **remove the fixture** (a two-step
   in-modal confirm — deletes the match and its events); "Edit lineup" picks
   the starting XI from the squad and sets a formation (e.g. "2-3-1"). The
-  fixtures list refreshes on return, so a deleted match drops off it
+  fixtures list refreshes on return, so a deleted match drops off it. A
+  failed removal says why (signed out, offline, server error, or a
+  `matchday-api` deployed without the `DELETE` route)
 - **Minutes played** — once a match is under way, the match centre lists the
   squad split into on-pitch and bench with live minutes per player, derived
   from the lineup, the substitutions and the clock (`src/lib/player-minutes.ts`)
@@ -86,7 +88,11 @@ EXPO_PUBLIC_COGNITO_USER_POOL_ID=<region>_xxxxxxxxx
 EXPO_PUBLIC_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-Coaches sign in (or register) on first launch — see `src/components/auth/`. A "Forgot password?"
+Coaches sign in (or register) on first launch — see `src/components/auth/`. The session is
+kept in the device keychain (`expo-secure-store`, via `src/lib/auth/session-store.ts`) and
+restored on every launch, so a registered coach isn't asked for their password again; a
+transient failure while refreshing the token keeps the coach signed in rather than bouncing
+them to the login screen. A "Forgot password?"
 link on the sign-in screen runs the Cognito reset flow: request a one-time code by email, then
 set a new password with it. Cognito auth pulls
 in a native crypto polyfill (`react-native-get-random-values`), so **Expo Go can't run this app**;
@@ -140,7 +146,7 @@ matchday
 │   │   ├── Screen, Card, Button, Badge, MatchCard, SkeletonCard, TextField, StateView
 │   │   └── __tests__
 │   ├── lib
-│   │   ├── auth       # Cognito wrapper (cognito.ts) + AuthProvider/useAuth (auth-context.tsx)
+│   │   ├── auth       # Cognito wrapper (cognito.ts) + AuthProvider/useAuth (auth-context.tsx) + session-store.ts (keychain)
 │   │   ├── data       # repository interface (incl. addPlayer), mock + HttpRepository, swap point (index.ts)
 │   │   ├── coach-api.ts # club/coach/team management endpoints (registration, onboarding)
 │   │   ├── types.ts   # domain models (Match, Standing, Player)

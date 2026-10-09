@@ -1,5 +1,6 @@
 import type { Match, MatchDetail, Player, Standing } from '@/lib/types';
 
+import { ApiError } from './repository';
 import type {
   LineupUpdate,
   MatchClockUpdate,
@@ -31,6 +32,16 @@ async function request<T>(
   });
   if (!res.ok) throw new Error(`matchday-api ${path} failed: ${res.status}`);
   return (await res.json()) as T;
+}
+
+/** True for the API's own "match not found" 404, as opposed to an unrouted path. */
+async function isMatchNotFound(res: Response): Promise<boolean> {
+  try {
+    const body = (await res.json()) as { error?: string } | null;
+    return body?.error === 'match not found';
+  } catch {
+    return false;
+  }
 }
 
 /** matchday-api's Match type doesn't carry a venue field yet — default it until that lands. */
@@ -115,7 +126,13 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
         method: 'DELETE',
         headers: { authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error(`matchday-api ${path} failed: ${res.status}`);
+      if (res.ok) return;
+      // The API's own 404 is JSON (`{ error: 'match not found' }`): the fixture
+      // is already gone, which is what the coach asked for. Any other 404 is
+      // the router not knowing the route — an API deployed before DELETE
+      // existed — and has to surface, or the fixture silently stays put.
+      if (res.status === 404 && (await isMatchNotFound(res))) return;
+      throw new ApiError(`matchday-api ${path} failed: ${res.status}`, res.status);
     },
     updateMatchScore: async (id, update: MatchScoreUpdate) => {
       const match = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`, {

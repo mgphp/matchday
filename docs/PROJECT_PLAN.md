@@ -582,6 +582,33 @@ Typing a fixture date as `YYYY-MM-DD` was error-prone on a phone.
 - [x] Tests: `date-picker.test.tsx` (placeholder, pick + close, reopen on the
       selected month, month paging across a year, leap February);
       `add-fixture-modal.test.tsx` picks the date from the calendar.
+### M5.2 — Persistent coach session ([#56](https://github.com/mgphp/matchday/issues/56))
+
+Closes an M5 gap: a registered coach was re-prompted for email + password on
+most launches — a transient error while restoring the session wiped it, and the
+tokens sat in plain `AsyncStorage`.
+
+- [x] `src/lib/auth/session-store.ts` — `loadSession` / `saveSession` /
+      `clearSession` over `expo-secure-store` (Keychain / Keystore), falling
+      back to `AsyncStorage` on web. Each token field is stored under its own
+      key to stay within SecureStore's ~2KB Android value cap. A one-time
+      migration lifts a pre-existing `matchday:session` blob out of
+      `AsyncStorage` on first read so current sign-ins survive the update.
+- [x] `cognito.ts` gains `isAuthError(err)` — true only for
+      `NotAuthorizedException` / `UserNotFoundException` /
+      `PasswordResetRequiredException`.
+- [x] `auth-context.tsx` launch restore: on a refresh failure it now signs the
+      coach out **only** when `isAuthError` says the refresh token is dead;
+      any other failure (offline, 5xx) keeps the stored session and lets
+      `getAccessToken` refresh once connectivity returns.
+- [x] `.env.example` unchanged — no new vars. `app.json` gains the
+      `expo-secure-store` config plugin (native rebuild required).
+- [x] Tests: `session-store` (round-trip, per-key layout, clear, legacy
+      migration, malformed blob) and `auth-context` (restore without prompt,
+      transient refresh failure keeps the session, rejected refresh token
+      clears it).
+- **Not done here:** lengthening the Cognito app-client refresh-token validity
+  (infra config in `matchday-api`), and an optional biometric unlock gate.
 
 ## Definition of done (every milestone)
 
