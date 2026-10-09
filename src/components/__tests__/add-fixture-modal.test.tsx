@@ -16,6 +16,15 @@ const existingFixture: Match = {
   away: { id: 'opp-9', name: 'Harbour City', shortName: 'HBC' },
 };
 
+// The date picker opens on the current month — pin "today" to 1 Sep 2026.
+beforeEach(() => {
+  jest.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 8, 1, 12));
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 type Rendered = Awaited<ReturnType<typeof render>>;
 
 /** Fills everything except the kickoff, which each clash test sets itself. */
@@ -42,7 +51,8 @@ describe('AddFixtureModal', () => {
     await userEvent.type(getByLabelText('Competition'), 'League Cup');
     expect(getByText('Add')).toBeDisabled();
 
-    await userEvent.type(getByLabelText('Date (YYYY-MM-DD)'), '2026-09-05');
+    await userEvent.press(getByLabelText('Date, Choose a date'));
+    await userEvent.press(getByLabelText('5 September 2026'));
     expect(getByText('Add')).toBeDisabled();
 
     await userEvent.type(getByLabelText('Kick-off time (HH:MM)'), '10:00');
@@ -60,7 +70,8 @@ describe('AddFixtureModal', () => {
     await userEvent.type(getByLabelText('Opponent'), 'Rivals FC');
     await userEvent.type(getByLabelText('Opponent short name (e.g. HBC)'), 'riv');
     await userEvent.type(getByLabelText('Competition'), 'League Cup');
-    await userEvent.type(getByLabelText('Date (YYYY-MM-DD)'), '2026-09-05');
+    await userEvent.press(getByLabelText('Date, Choose a date'));
+    await userEvent.press(getByLabelText('5 September 2026'));
     await userEvent.type(getByLabelText('Kick-off time (HH:MM)'), '10:00');
     await userEvent.press(getByText('Add'));
 
@@ -83,7 +94,8 @@ describe('AddFixtureModal', () => {
     await userEvent.type(getByLabelText('Opponent'), 'Rivals FC');
     await userEvent.type(getByLabelText('Opponent short name (e.g. HBC)'), 'riv');
     await userEvent.type(getByLabelText('Competition'), 'League Cup');
-    await userEvent.type(getByLabelText('Date (YYYY-MM-DD)'), '2026-09-05');
+    await userEvent.press(getByLabelText('Date, Choose a date'));
+    await userEvent.press(getByLabelText('5 September 2026'));
     await userEvent.type(getByLabelText('Kick-off time (HH:MM)'), '10:00');
     await userEvent.press(getByText('Add'));
 
@@ -103,7 +115,8 @@ describe('AddFixtureModal', () => {
     await userEvent.type(getByLabelText('Opponent'), 'Rivals FC');
     await userEvent.type(getByLabelText('Opponent short name (e.g. HBC)'), 'riv');
     await userEvent.type(getByLabelText('Competition'), 'League Cup');
-    await userEvent.type(getByLabelText('Date (YYYY-MM-DD)'), '2026-09-05');
+    await userEvent.press(getByLabelText('Date, Choose a date'));
+    await userEvent.press(getByLabelText('5 September 2026'));
     await userEvent.type(getByLabelText('Kick-off time (HH:MM)'), '10:00');
     await userEvent.press(getByText('Add'));
 
@@ -134,7 +147,8 @@ describe('AddFixtureModal', () => {
     );
 
     await fillFixture(screen);
-    await userEvent.type(screen.getByLabelText('Date (YYYY-MM-DD)'), '2026-09-05');
+    await userEvent.press(screen.getByLabelText('Date, Choose a date'));
+    await userEvent.press(screen.getByLabelText('5 September 2026'));
     await userEvent.type(screen.getByLabelText('Kick-off time (HH:MM)'), '10:30');
 
     expect(await screen.findByText(/You already have a fixture around then/)).toBeTruthy();
@@ -155,7 +169,8 @@ describe('AddFixtureModal', () => {
     );
 
     await fillFixture(screen);
-    await userEvent.type(screen.getByLabelText('Date (YYYY-MM-DD)'), '2026-09-05');
+    await userEvent.press(screen.getByLabelText('Date, Choose a date'));
+    await userEvent.press(screen.getByLabelText('5 September 2026'));
     await userEvent.type(screen.getByLabelText('Kick-off time (HH:MM)'), '14:00');
 
     expect(screen.queryByText(/You already have a fixture around then/)).toBeNull();
@@ -173,7 +188,8 @@ describe('AddFixtureModal', () => {
     );
 
     await fillFixture(screen);
-    await userEvent.type(screen.getByLabelText('Date (YYYY-MM-DD)'), '2026-09-05');
+    await userEvent.press(screen.getByLabelText('Date, Choose a date'));
+    await userEvent.press(screen.getByLabelText('5 September 2026'));
     await userEvent.type(screen.getByLabelText('Kick-off time (HH:MM)'), '10');
 
     expect(screen.queryByText(/You already have a fixture around then/)).toBeNull();
