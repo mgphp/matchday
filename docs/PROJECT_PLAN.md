@@ -568,6 +568,20 @@ but never deleted.
       `http-repository` (DELETE shape + non-ok throws), `edit-match-modal`
       (confirm flow, cancel), `match-detail-screen` (remove navigates back).
 
+### M15 — Date picker for new fixtures
+
+Typing a fixture date as `YYYY-MM-DD` was error-prone on a phone.
+
+- [x] `DatePicker` (`src/components/date-picker.tsx`) — a field that opens an
+      inline month calendar (Monday-first, prev/next month, today outlined,
+      selection filled). Same no-overlay shape as `Select`, no native
+      dependency, so it works on iOS, Android and web without a rebuild.
+      Value stays a `YYYY-MM-DD` string.
+- [x] `AddFixtureModal` uses it for the date; kick-off time is still a typed
+      `HH:MM` field. The kickoff string format is unchanged.
+- [x] Tests: `date-picker.test.tsx` (placeholder, pick + close, reopen on the
+      selected month, month paging across a year, leap February);
+      `add-fixture-modal.test.tsx` picks the date from the calendar.
 ### M5.2 — Persistent coach session ([#56](https://github.com/mgphp/matchday/issues/56))
 
 Closes an M5 gap: a registered coach was re-prompted for email + password on
