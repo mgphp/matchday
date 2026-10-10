@@ -651,6 +651,28 @@ tokens sat in plain `AsyncStorage`.
 - **Not done here:** lengthening the Cognito app-client refresh-token validity
   (infra config in `matchday-api`), and an optional biometric unlock gate.
 
+### M17 — Pre-match rotation plan
+
+The sub schedule only appeared once a match was live. A coach wants it before
+kick-off, to know who comes on when.
+
+- [x] A scheduled match with a lineup shows the **Rotation plan** card:
+      every planned sub (minute, who comes on, who goes off) and a "Planned
+      minutes" list — each player, whether they start or begin on the bench,
+      and how long they play if the plan is followed.
+- [x] Reuses `rotationPlan` unchanged, fed the starting lineup with everyone on
+      zero minutes. Unavailable players are left out.
+- [x] The goalkeeper (the starter whose main position is GK) is static: shown
+      for the full match and never in a swap. Rotating keepers is a separate
+      feature.
+- [x] Uses `Match.durationMinutes` (default 90) and says so, pointing at Edit
+      match. With no lineup the card prompts for one; with no bench it says
+      everyone plays the full match.
+- [x] Tests: four `match-detail-screen` cases (no lineup, full plan with even
+      minutes, unavailable player excluded, no bench).
+- **Known gap:** sub times split the match into equal spells and aren't
+  aligned to half time.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)
