@@ -276,9 +276,23 @@ export default function MatchDetailScreen() {
   // the maths (they can still be swapped by hand via the substitution modal).
   const keeper = ourLineup?.find((player) => player.position === 'GK') ?? ourLineup?.[0];
   const outfieldOnPitch = (ourLineup?.length ?? 0) - (keeper ? 1 : 0);
-  const outfieldMinutes = availableMinutes?.filter((entry) => entry.player.id !== keeper?.id);
+  // Before kick-off the same plan is worked out from the starting lineup with
+  // everyone on zero, so the coach can see the whole match's subs in advance.
+  const isPreMatch = data.status === 'scheduled';
+  const preMatchMinutes =
+    isPreMatch && ourLineup && ourLineup.length > 0 && squad
+      ? playerMinutes({ starting: ourLineup, events: [], side: ownSide, squad, elapsed: 0 }).filter(
+          (entry) => isAvailable(data, entry.player.id),
+        )
+      : undefined;
+  const outfieldMinutes = (isPreMatch ? preMatchMinutes : availableMinutes)?.filter(
+    (entry) => entry.player.id !== keeper?.id,
+  );
   const plan =
-    data.status === 'live' && outfieldMinutes && outfieldMinutes.length > 0 && outfieldOnPitch > 0
+    (data.status === 'live' || isPreMatch) &&
+    outfieldMinutes &&
+    outfieldMinutes.length > 0 &&
+    outfieldOnPitch > 0
       ? rotationPlan({
           minutes: outfieldMinutes,
           onPitchCount: outfieldOnPitch,
@@ -409,12 +423,22 @@ export default function MatchDetailScreen() {
           </Card>
         ) : null}
 
-        {plan && plan.subs.length > 0 ? (
+        {plan && (isPreMatch || plan.subs.length > 0) ? (
           <Card>
             <SectionHeader title="Rotation plan" variant="accent" />
             <Text style={styles.planTarget}>
               Even share ≈ {plan.target}&#8242; each · goalkeeper isn&#8217;t rotated
             </Text>
+            {isPreMatch ? (
+              <Text style={styles.rotationHint}>
+                Planned for a {duration}&#8242; match — change the length in Edit match.
+              </Text>
+            ) : null}
+            {isPreMatch && plan.subs.length === 0 ? (
+              <Text style={styles.emptyText}>
+                No one on the bench — everyone plays the full match.
+              </Text>
+            ) : null}
             {subsByMinute(plan.subs).map(({ minute: at, swaps }) => (
               <View
                 key={at}
@@ -439,6 +463,48 @@ export default function MatchDetailScreen() {
                 </View>
               </View>
             ))}
+            {isPreMatch ? (
+              <>
+                <Text style={styles.minutesGroupLabel}>Planned minutes</Text>
+                {keeper ? (
+                  <View
+                    accessibilityLabel={`${keeper.name}, goalkeeper, planned ${duration} minutes`}
+                    style={styles.minutesRow}
+                  >
+                    <Text style={styles.minutesNumber}>{keeper.squadNumber}</Text>
+                    <Text style={styles.minutesName}>{keeper.name}</Text>
+                    <Text style={styles.rotationHint}>goalkeeper</Text>
+                    <Text style={styles.minutesValue}>{duration}&#8242;</Text>
+                  </View>
+                ) : null}
+                {plan.projected.map(({ player, minutes: planned }) => {
+                  const starts = ourLineup?.some((starter) => starter.id === player.id) ?? false;
+                  return (
+                    <View
+                      key={player.id}
+                      accessibilityLabel={`${player.name}, ${
+                        starts ? 'starts' : 'starts on the bench'
+                      }, planned ${planned} minutes`}
+                      style={styles.minutesRow}
+                    >
+                      <Text style={styles.minutesNumber}>{player.squadNumber}</Text>
+                      <Text style={[styles.minutesName, !starts && styles.minutesNameBench]}>
+                        {player.name}
+                      </Text>
+                      <Text style={styles.rotationHint}>{starts ? 'starts' : 'bench'}</Text>
+                      <Text style={styles.minutesValue}>{planned}&#8242;</Text>
+                    </View>
+                  );
+                })}
+              </>
+            ) : null}
+          </Card>
+        ) : isPreMatch && !ourLineup?.length ? (
+          <Card>
+            <SectionHeader title="Rotation plan" variant="accent" />
+            <Text style={styles.emptyText}>
+              Set your lineup to see when to make each sub and how long everyone plays.
+            </Text>
           </Card>
         ) : null}
 
