@@ -13,7 +13,8 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
 - **Squad** — players grouped under GK/DF/MF/FW section headers by main
   position, in a list that scrolls for squads too long for the screen; a player can have several positions (first pick is the main one)
   and is offered for any of them when picking a lineup. "Add player"
-  and tapping a row to edit or remove them. A removal can be undone from a
+  and tapping a row to edit or remove them (Remove player sits in a Danger
+  zone with a Cancel / Remove confirm). A removal can be undone from a
   banner for 8 seconds, restoring the player's original id
 - **Table** — full league standings with promotion/relegation zone
   highlighting; implemented but currently hidden from the tab bar pending

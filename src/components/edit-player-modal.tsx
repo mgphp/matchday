@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { ConfirmDestructive } from '@/components/confirm-destructive';
 import { PositionPicker } from '@/components/position-picker';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
@@ -28,7 +29,6 @@ export function EditPlayerModal({
   const [squadNumber, setSquadNumber] = useState(player.squadNumber.toString());
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [confirmingRemove, setConfirmingRemove] = useState(false);
 
   const parsedNumber = Number(squadNumber);
   const isComplete =
@@ -40,7 +40,6 @@ export function EditPlayerModal({
 
   const handleClose = () => {
     setError(undefined);
-    setConfirmingRemove(false);
     onClose();
   };
 
@@ -63,21 +62,9 @@ export function EditPlayerModal({
   };
 
   const handleRemove = async () => {
-    if (!confirmingRemove) {
-      setConfirmingRemove(true);
-      return;
-    }
     setError(undefined);
-    setIsSubmitting(true);
-    try {
-      await onRemove();
-      onClose();
-    } catch {
-      setError('Could not remove the player. Try again.');
-      setConfirmingRemove(false);
-    } finally {
-      setIsSubmitting(false);
-    }
+    await onRemove();
+    onClose();
   };
 
   return (
@@ -108,10 +95,14 @@ export function EditPlayerModal({
           onPress={handleSubmit}
           disabled={isSubmitting || !isComplete}
         />
-        <Button
-          label={confirmingRemove ? 'Tap again to confirm removal' : 'Remove player'}
-          variant="secondary"
-          onPress={handleRemove}
+        <ConfirmDestructive
+          description="Takes this player out of the squad. You can undo it straight after."
+          triggerLabel="Remove player"
+          warning={`Remove ${player.name} from the squad?`}
+          confirmLabel="Remove"
+          busyLabel="Removing…"
+          onConfirm={handleRemove}
+          onError={() => setError('Could not remove the player. Try again.')}
           disabled={isSubmitting}
         />
       </Screen>

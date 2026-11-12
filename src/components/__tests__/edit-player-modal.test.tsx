@@ -106,7 +106,7 @@ describe('EditPlayerModal', () => {
     expect(getByText('Save')).toBeDisabled();
   });
 
-  it('removes the player only after a second confirming press', async () => {
+  it('removes the player only after confirming in the danger zone', async () => {
     const onRemove = jest.fn().mockResolvedValue(undefined);
     const onClose = jest.fn();
     const { getByText } = await render(
@@ -122,7 +122,8 @@ describe('EditPlayerModal', () => {
     await userEvent.press(getByText('Remove player'));
     expect(onRemove).not.toHaveBeenCalled();
 
-    await userEvent.press(getByText('Tap again to confirm removal'));
+    expect(getByText(`Remove ${player.name} from the squad?`)).toBeTruthy();
+    await userEvent.press(getByText('Remove'));
     expect(onRemove).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalled();
   });
