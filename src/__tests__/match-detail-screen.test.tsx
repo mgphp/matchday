@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams } from 'expo-router';
 import { render, userEvent, waitFor } from '@testing-library/react-native';
 
@@ -23,7 +24,13 @@ function renderScreen() {
 }
 
 describe('MatchDetailScreen', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    // These cases are written for an 11-a-side, 90-minute team format; the
+    // 7-a-side default is covered by its own test below.
+    await AsyncStorage.setItem(
+      'matchday:matchFormat:rovers',
+      JSON.stringify({ teamSize: 11, durationMinutes: 90 }),
+    );
     jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'm1' });
     mockBack.mockClear();
     mockReplace.mockClear();
@@ -37,6 +44,20 @@ describe('MatchDetailScreen', () => {
     // Once in the events timeline, once in the minutes-played list.
     expect(getAllByText('Jamie Cole').length).toBeGreaterThan(0);
     expect(getByText('assist Ryo Tanaka')).toBeTruthy();
+  });
+
+  it('falls back to the team format length when the match has none', async () => {
+    await AsyncStorage.removeItem('matchday:matchFormat:rovers');
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'm2' });
+    const squad = await mockRepository.getSquad();
+    await mockRepository.updateLineup('m2', { side: 'away', players: squad.slice(0, 5) });
+
+    const { findByText } = await renderScreen();
+
+    // No saved format → 7-a-side, 50 minutes — not the old 90.
+    expect(await findByText(/Planned for a 50′ match/)).toBeTruthy();
+
+    await mockRepository.updateLineup('m2', { side: 'away', players: [] });
   });
 
   it('shows only our lineup, never an empty opponent column', async () => {

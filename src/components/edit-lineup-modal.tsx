@@ -8,6 +8,7 @@ import { Select } from '@/components/select';
 import { StateView } from '@/components/state-view';
 import { repository } from '@/lib/data';
 import type { LineupUpdate } from '@/lib/data/repository';
+import { DEFAULT_MATCH_FORMAT } from '@/lib/match-format';
 import { buildSlots, type Group, type Slot } from '@/lib/pitch-slots';
 import { canPlay, positionsLabel } from '@/lib/positions';
 import type { MatchDetail, Player } from '@/lib/types';
@@ -15,7 +16,6 @@ import { colors, radii, spacing, typography } from '@/theme/theme';
 
 const MIN_TEAM_SIZE = 5;
 const MAX_TEAM_SIZE = 11;
-const DEFAULT_TEAM_SIZE = 7;
 const TEAM_SIZES: readonly string[] = Array.from(
   { length: MAX_TEAM_SIZE - MIN_TEAM_SIZE + 1 },
   (_, i) => String(MIN_TEAM_SIZE + i),
@@ -197,11 +197,14 @@ export function EditLineupModal({
   onClose,
   match,
   side,
+  defaultTeamSize = DEFAULT_MATCH_FORMAT.teamSize,
   onSubmit,
 }: {
   visible: boolean;
   onClose: () => void;
   match: MatchDetail;
+  /** The team's format size, used when the match has no formation yet. */
+  defaultTeamSize?: number;
   /** Which side of this fixture is ours. */
   side: 'home' | 'away';
   onSubmit: (update: LineupUpdate) => Promise<void>;
@@ -210,11 +213,11 @@ export function EditLineupModal({
   const [loadError, setLoadError] = useState(false);
 
   const initialTeamSize = useMemo(() => {
-    if (!match.formation) return DEFAULT_TEAM_SIZE;
+    if (!match.formation) return defaultTeamSize;
     const outfield = match.formation.split('-').reduce((sum, part) => sum + Number(part), 0);
     const size = outfield + 1;
     return Math.min(MAX_TEAM_SIZE, Math.max(MIN_TEAM_SIZE, size));
-  }, [match.formation]);
+  }, [match.formation, defaultTeamSize]);
 
   const [teamSize, setTeamSize] = useState(initialTeamSize);
   const formationOptions = useMemo(() => formationsFor(teamSize - 1), [teamSize]);

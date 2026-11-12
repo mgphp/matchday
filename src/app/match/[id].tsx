@@ -23,14 +23,9 @@ import {
   type ClockAction,
 } from '@/lib/match-clock';
 import { isAvailable } from '@/lib/availability';
+import { useMatchFormat } from '@/lib/match-format';
 import { playerMinutes } from '@/lib/player-minutes';
-import {
-  DEFAULT_DURATION_MINUTES,
-  dueOff,
-  dueOn,
-  rotation,
-  type RotationEntry,
-} from '@/lib/rotation';
+import { dueOff, dueOn, rotation, type RotationEntry } from '@/lib/rotation';
 import { rotationPlan, type PlannedSub } from '@/lib/rotation-plan';
 import { useTeam } from '@/lib/team-context';
 import type { MatchDetail, MatchEvent, Player } from '@/lib/types';
@@ -256,6 +251,7 @@ export default function MatchDetailScreen() {
   const getSquad = useCallback(() => repository.getSquad(), []);
   const { data: squad } = useData(getSquad);
   const ownTeam = useTeam();
+  const { format } = useMatchFormat(ownTeam.id);
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingLineup, setIsEditingLineup] = useState(false);
   const [isSubstituting, setIsSubstituting] = useState(false);
@@ -329,7 +325,8 @@ export default function MatchDetailScreen() {
   // missing player doesn't drag everyone else's share down.
   const availableMinutes = minutesPlayed?.filter((entry) => isAvailable(data, entry.player.id));
   const missing = minutesPlayed?.filter((entry) => !isAvailable(data, entry.player.id)) ?? [];
-  const duration = data.durationMinutes ?? DEFAULT_DURATION_MINUTES;
+  // No length of its own → the team's format default (Settings).
+  const duration = data.durationMinutes ?? format.durationMinutes;
   const rotationEntries = availableMinutes
     ? rotation({
         minutes: availableMinutes,
@@ -517,7 +514,8 @@ export default function MatchDetailScreen() {
             </Text>
             {isPreMatch ? (
               <Text style={styles.rotationHint}>
-                Planned for a {duration}&#8242; match — change the length in Edit match.
+                Planned for a {duration}&#8242; match — change it for this match in Edit match, or
+                for every match in Settings.
               </Text>
             ) : null}
             {isPreMatch && plan.subs.length === 0 ? (
@@ -632,6 +630,7 @@ export default function MatchDetailScreen() {
         visible={isEditing}
         onClose={() => setIsEditing(false)}
         match={data}
+        defaultDurationMinutes={format.durationMinutes}
         onSubmit={async (update) => {
           await repository.updateMatchScore(data.id, update);
           await refresh();
@@ -647,6 +646,7 @@ export default function MatchDetailScreen() {
         onClose={() => setIsEditingLineup(false)}
         match={data}
         side={ownSide}
+        defaultTeamSize={format.teamSize}
         onSubmit={async (update) => {
           await repository.updateLineup(data.id, update);
           await refresh();

@@ -19,8 +19,10 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
 - **Table** — full league standings with promotion/relegation zone
   highlighting; implemented but currently hidden from the tab bar pending
   further polish (`src/app/(tabs)/table.tsx`)
-- **Settings** — pick a favourite team, persisted on-device via
-  `@react-native-async-storage/async-storage`
+- **Settings** — the team's **match format** (5/7/9/11-a-side and a match
+  length, defaulting to the FA grassroots lengths 40/50/60/90 minutes; 7-a-side,
+  50 minutes until set) and a favourite team, both persisted on-device via
+  `@react-native-async-storage/async-storage` (`src/lib/match-format.ts`)
 - **Match centre** (`/match/[id]`) — score header, events timeline (goals,
   cards, substitutions) and our own lineup (the opponent's isn't recorded); "Edit match"
   updates status and score, and can **remove the fixture** (in its Danger zone, a
@@ -48,7 +50,8 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
   time as a target, and is flagged "due on" (teal) or "due off" (amber) when
   they drift off it. A "Due off … · Due on …" hint sits next to the
   Substitution button. Set the match length with "Full-time minutes" in
-  "Edit match" — it defaults to 90 (`src/lib/rotation.ts`)
+  "Edit match" — a match without one uses the team's match format from
+  Settings
 - **Rotation plan** — once a match kicks off, a prominent timer and a
   forward substitution schedule: the match is split into equal shifts so every
   available outfielder gets the same minutes, and the plan lists the minute
@@ -167,6 +170,7 @@ matchday
 │   │   ├── coach-api.ts # club/coach/team management endpoints (registration, onboarding)
 │   │   ├── types.ts   # domain models (Match, Standing, Player)
 │   │   ├── use-data.ts # async data hook (loading/error/success)
+│   │   ├── match-format.ts # team size + default match length, per team, via AsyncStorage
 │   │   └── favourite-team.ts # favourite team, persisted via AsyncStorage
 │   └── theme
 │       ├── theme.ts   # design tokens (colors, spacing, radii, typography)
