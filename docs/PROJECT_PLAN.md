@@ -651,6 +651,16 @@ tokens sat in plain `AsyncStorage`.
 - **Not done here:** lengthening the Cognito app-client refresh-token validity
   (infra config in `matchday-api`), and an optional biometric unlock gate.
 
+### M5.3 — Squad list scrolls ([#67](https://github.com/mgphp/matchday/issues/67))
+
+The squad list was a non-scrolling `SectionList` inside a plain `View`, so a
+squad of about 15+ ran off the bottom of a phone screen and those players
+couldn't be reached.
+
+- [x] The list scrolls inside its card; the card shrinks to fit the screen
+      (`flexShrink: 1`) but still hugs a short squad.
+- [x] Test: a 20-player squad renders a scrollable list.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)

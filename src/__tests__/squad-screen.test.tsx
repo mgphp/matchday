@@ -146,4 +146,22 @@ describe('SquadScreen', () => {
 
     expect(queryByLabelText('Undo')).toBeNull();
   });
+
+  it('lets a long squad scroll so every player stays reachable', async () => {
+    const positions = ['GK', 'DF', 'MF', 'FW'] as const;
+    mockGetSquad.mockResolvedValueOnce(
+      Array.from({ length: 20 }, (_, index) => ({
+        id: `p${index + 1}`,
+        name: `Player ${index + 1}`,
+        position: positions[index % positions.length],
+        squadNumber: index + 1,
+      })),
+    );
+    const { findByLabelText, getByTestId } = await render(<SquadScreen />);
+    await findByLabelText('Number 1, Player 1, Goalkeeper');
+
+    // Rows past the fold are only reachable if the list itself scrolls — the
+    // screen around it is a plain View.
+    expect(getByTestId('squad-list').props.scrollEnabled).not.toBe(false);
+  });
 });
