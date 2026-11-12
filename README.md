@@ -28,6 +28,14 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
   fixtures list refreshes on return, so a deleted match drops off it. A
   failed removal says why (signed out, offline, server error, or a
   `matchday-api` deployed without the `DELETE` route)
+- **Goals and cards** — "Goal / card" on a live or finished match records a
+  goal, yellow or red card for either side: pick our player (on the pitch
+  first, then the bench) or optionally name theirs, at the clock minute
+  (editable). A goal also adds one to that side's score in the same save, so
+  score, scorers and timeline stay in step. Every timeline event has a bin
+  icon with an inline Cancel / Remove confirm; removing a goal takes it off
+  the score (`src/components/record-event-modal.tsx`,
+  `src/lib/data/goal-score.ts`)
 - **Minutes played** — once a match is under way, the match centre lists the
   squad split into on-pitch and bench with live minutes per player, derived
   from the lineup, the substitutions and the clock (`src/lib/player-minutes.ts`)

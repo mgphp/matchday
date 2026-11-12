@@ -1,5 +1,6 @@
 import type { Match, MatchDetail, Player, Standing } from '@/lib/types';
 
+import { scoreAfterGoal } from './goal-score';
 import { ApiError } from './repository';
 import type {
   LineupUpdate,
@@ -172,9 +173,21 @@ export function createHttpRepository(options: HttpRepositoryOptions): MatchdayRe
       const events = [...(current.events ?? []), { ...event, id: generateEventId() }].sort(
         (a, b) => a.minute - b.minute,
       );
+      // One PATCH for timeline + score, so a goal can't land without its score.
       const match = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`, {
         method: 'PATCH',
-        body: { events },
+        body: { events, ...scoreAfterGoal(current, event, 1) },
+      });
+      return normaliseMatch(match);
+    },
+    removeEvent: async (id, eventId) => {
+      const current = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`);
+      const removed = (current.events ?? []).find((event) => event.id === eventId);
+      if (!removed) throw new Error(`No event ${eventId} on match ${id}`);
+      const events = (current.events ?? []).filter((event) => event.id !== eventId);
+      const match = await request<MatchDetail>(options, `teams/${teamId}/matches/${id}`, {
+        method: 'PATCH',
+        body: { events, ...scoreAfterGoal(current, removed, -1) },
       });
       return normaliseMatch(match);
     },

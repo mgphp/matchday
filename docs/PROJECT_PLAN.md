@@ -693,6 +693,30 @@ The API returns fixtures oldest-first and the Matches list never re-sorted, so
       with #69).
 - [x] Unit tests for both orders, section order, pinning and no input mutation.
 
+### M18 — Record goals and cards ([#66](https://github.com/mgphp/matchday/issues/66))
+
+Substitutions were the only event the app could create, so real matches had
+no scorers and the score was typed by hand, free to disagree with the
+timeline.
+
+- [x] `RecordEventModal`: goal / yellow card / red card, for either side. Our
+      side picks from the available squad (on the pitch first, then the
+      bench; whole squad when no lineup is set). Theirs takes an optional name
+      and falls back to the opponent's team name. Minute pre-filled from the
+      clock and editable.
+- [x] "Goal / card" on the match centre for live **and** finished matches
+      (filling in after the final whistle). The actions row now wraps.
+- [x] Score sync in the repository: `addEvent` adds one to the scoring side's
+      score for a goal; the new `removeEvent(id, eventId)` takes it back off
+      (never below 0). Over HTTP the events and the score go in one `PATCH`,
+      so a goal can't land without its score. No API change needed.
+- [x] Timeline rows get a bin icon → inline Cancel / Remove confirm.
+- [x] Tests: `goal-score`, http + mock repositories (goal PATCH body, card
+      leaves the score out, removal, unknown event), `record-event-modal`,
+      and match-centre flows (record a goal, remove a goal, cancel, hidden
+      before kick-off).
+- **Not done here:** own goals, assists, and second-yellow → red logic.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)

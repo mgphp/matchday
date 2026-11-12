@@ -1,13 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { EditLineupModal } from '@/components/edit-lineup-modal';
 import { EditMatchModal } from '@/components/edit-match-modal';
+import { RecordEventModal } from '@/components/record-event-modal';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { StateView } from '@/components/state-view';
@@ -74,13 +75,80 @@ function eventIcon(type: MatchEvent['type']) {
   }
 }
 
-function EventRow({ event }: { event: MatchEvent }) {
+const EVENT_NAMES: Record<MatchEvent['type'], string> = {
+  goal: 'goal',
+  'yellow-card': 'yellow card',
+  'red-card': 'red card',
+  substitution: 'substitution',
+};
+
+/**
+ * One timeline row. The bin icon expands to an inline Cancel / Remove confirm
+ * (same no-OS-dialog style as removing a fixture) — a mis-tapped goal is
+ * common on a touchline, and deleting one also takes it off the score.
+ */
+function EventRow({ event, onRemove }: { event: MatchEvent; onRemove: () => Promise<void> }) {
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [error, setError] = useState(false);
+  const description = `${event.minute} minute ${EVENT_NAMES[event.type]}, ${event.player}`;
+
+  const handleRemove = async () => {
+    setError(false);
+    setIsRemoving(true);
+    try {
+      await onRemove();
+    } catch {
+      setError(true);
+      setIsRemoving(false);
+      setIsConfirming(false);
+    }
+  };
+
   return (
-    <View style={styles.eventRow}>
-      <Text style={styles.minute}>{event.minute}&#8242;</Text>
-      {eventIcon(event.type)}
-      <Text style={styles.eventPlayer}>{event.player}</Text>
-      {event.detail ? <Text style={styles.eventDetail}>{event.detail}</Text> : null}
+    <View>
+      <View style={styles.eventRow}>
+        <Text style={styles.minute}>{event.minute}&#8242;</Text>
+        {eventIcon(event.type)}
+        <Text style={styles.eventPlayer}>{event.player}</Text>
+        {event.detail ? <Text style={styles.eventDetail}>{event.detail}</Text> : null}
+        <View style={styles.eventSpacer} />
+        {isConfirming ? (
+          <>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+              onPress={() => setIsConfirming(false)}
+              disabled={isRemoving}
+              style={styles.eventAction}
+            >
+              <Text style={styles.eventCancel}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Confirm remove ${description}`}
+              onPress={handleRemove}
+              disabled={isRemoving}
+              style={styles.eventAction}
+            >
+              <Text style={styles.eventRemove}>{isRemoving ? 'Removing…' : 'Remove'}</Text>
+            </Pressable>
+          </>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Remove ${description}`}
+            onPress={() => setIsConfirming(true)}
+            hitSlop={spacing.sm}
+            style={styles.eventAction}
+          >
+            <Ionicons name="trash-outline" size={16} color={colors.textSecondary} />
+          </Pressable>
+        )}
+      </View>
+      {error ? (
+        <Text style={styles.eventError}>Could not remove this event. Try again.</Text>
+      ) : null}
     </View>
   );
 }
@@ -191,6 +259,7 @@ export default function MatchDetailScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingLineup, setIsEditingLineup] = useState(false);
   const [isSubstituting, setIsSubstituting] = useState(false);
+  const [isRecordingEvent, setIsRecordingEvent] = useState(false);
 
   const isLive = data?.status === 'live';
   useEffect(() => {
@@ -239,6 +308,8 @@ export default function MatchDetailScreen() {
   // kick-off "who is on the pitch" is just the starting lineup, edited via
   // the lineup editor instead.
   const canSubstitute = data.status === 'live';
+  // Goals and cards can also be filled in after the final whistle.
+  const canRecordEvent = data.status === 'live' || data.status === 'finished';
 
   // Minutes only mean something once the match is under way; before kick-off
   // every player sits on zero, which is just noise.
@@ -362,6 +433,13 @@ export default function MatchDetailScreen() {
               variant="secondary"
               onPress={() => setIsEditingLineup(true)}
             />
+            {canRecordEvent ? (
+              <Button
+                label="Goal / card"
+                variant="secondary"
+                onPress={() => setIsRecordingEvent(true)}
+              />
+            ) : null}
             {canSubstitute ? (
               <Button
                 label="Substitution"
@@ -513,7 +591,16 @@ export default function MatchDetailScreen() {
           {data.events.length === 0 ? (
             <Text style={styles.emptyText}>No events yet.</Text>
           ) : (
-            data.events.map((event) => <EventRow key={event.id} event={event} />)
+            data.events.map((event) => (
+              <EventRow
+                key={event.id}
+                event={event}
+                onRemove={async () => {
+                  await repository.removeEvent(data.id, event.id);
+                  await refresh();
+                }}
+              />
+            ))
           )}
         </Card>
 
@@ -558,6 +645,17 @@ export default function MatchDetailScreen() {
         side={ownSide}
         onSubmit={async (update) => {
           await repository.updateLineup(data.id, update);
+          await refresh();
+        }}
+      />
+      <RecordEventModal
+        visible={isRecordingEvent}
+        onClose={() => setIsRecordingEvent(false)}
+        match={data}
+        side={ownSide}
+        minute={minute}
+        onSubmit={async (event) => {
+          await repository.addEvent(data.id, event);
           await refresh();
         }}
       />
@@ -608,6 +706,8 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: 'row',
+    // Up to four actions on a live match — wrap rather than squash them.
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
   emptyText: {
@@ -733,6 +833,27 @@ const styles = StyleSheet.create({
   eventDetail: {
     ...typography.caption,
     color: colors.textDisabled,
+  },
+  eventSpacer: {
+    flex: 1,
+  },
+  eventAction: {
+    minHeight: 32,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xs,
+  },
+  eventCancel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  eventRemove: {
+    ...typography.caption,
+    color: colors.danger,
+    fontWeight: '700',
+  },
+  eventError: {
+    ...typography.caption,
+    color: colors.danger,
   },
   cardIcon: {
     width: 10,

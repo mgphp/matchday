@@ -318,4 +318,54 @@ describe('MatchDetailScreen', () => {
       expect(await findByText(/everyone plays the full match/)).toBeTruthy();
     });
   });
+
+  it('hides Goal / card before kick-off', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'm2' });
+
+    const { findByText, queryByText } = await renderScreen();
+    await findByText('Kings Athletic v Westfield Wanderers');
+
+    expect(queryByText('Goal / card')).toBeNull();
+  });
+
+  it('records our goal: it joins the timeline, the scorers and the score', async () => {
+    const { findByText, getByText, getByLabelText } = await renderScreen();
+    await findByText('Northgate Rovers 1 – 0 Harbour City');
+
+    await userEvent.press(getByText('Goal / card'));
+    await findByText('On the pitch');
+    await userEvent.press(getByLabelText('10 Ryo Tanaka'));
+    await userEvent.clear(getByLabelText('Minute'));
+    await userEvent.type(getByLabelText('Minute'), '50');
+    await userEvent.press(getByText('Record goal'));
+
+    expect(await findByText('Northgate Rovers 2 – 0 Harbour City')).toBeTruthy();
+    expect(await findByText('Jamie Cole 34′\nRyo Tanaka 50′')).toBeTruthy();
+  });
+
+  it('offers Goal / card after full time, and removing a goal takes it off the score', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'm4' });
+
+    const { findByText, getByText, getByLabelText, queryByText } = await renderScreen();
+    await findByText('Westfield Wanderers 2 – 2 Northgate Rovers');
+    expect(getByText('Goal / card')).toBeTruthy();
+
+    await userEvent.press(getByLabelText('Remove 90 minute goal, Ryo Tanaka'));
+    await userEvent.press(getByLabelText('Confirm remove 90 minute goal, Ryo Tanaka'));
+
+    expect(await findByText('Westfield Wanderers 2 – 1 Northgate Rovers')).toBeTruthy();
+    expect(queryByText(/Ryo Tanaka 90′/)).toBeNull();
+  });
+
+  it('cancelling an event removal keeps it', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'm4' });
+
+    const { findByText, getByLabelText, getByText } = await renderScreen();
+    await findByText(/Westfield Wanderers \d – \d Northgate Rovers/);
+
+    await userEvent.press(getByLabelText('Remove 12 minute goal, Callum Reed'));
+    await userEvent.press(getByText('Cancel'));
+
+    expect(getByLabelText('Remove 12 minute goal, Callum Reed')).toBeTruthy();
+  });
 });

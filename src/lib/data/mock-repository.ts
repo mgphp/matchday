@@ -9,6 +9,8 @@ import type {
   NewMatchEvent,
 } from './repository';
 
+import { scoreAfterGoal } from './goal-score';
+
 const teams: Record<string, Team> = {
   rovers: { id: 'rovers', name: 'Northgate Rovers', shortName: 'NGR' },
   harbour: { id: 'harbour', name: 'Harbour City', shortName: 'HBC' },
@@ -290,8 +292,25 @@ export const mockRepository: MatchdayRepository = {
     const added: MatchEvent = { ...event, id: `e-${id}-${existing.length + 1}` };
     // Keep the timeline in minute order — a coach can record a sub late.
     events[id] = [...existing, added].sort((a, b) => a.minute - b.minute);
+    const index = fixtures.indexOf(match);
+    fixtures[index] = { ...match, ...scoreAfterGoal(match, event, 1) };
     return respond<MatchDetail>({
-      ...match,
+      ...fixtures[index],
+      events: events[id],
+      lineups: lineups[id],
+      formation: formations[id],
+      availablePlayerIds: availability[id],
+    });
+  },
+  removeEvent: (id, eventId) => {
+    const index = fixtures.findIndex((fixture) => fixture.id === id);
+    if (index === -1) return Promise.reject(new Error(`No match with id ${id}`));
+    const removed = (events[id] ?? []).find((event) => event.id === eventId);
+    if (!removed) return Promise.reject(new Error(`No event ${eventId} on match ${id}`));
+    events[id] = (events[id] ?? []).filter((event) => event.id !== eventId);
+    fixtures[index] = { ...fixtures[index], ...scoreAfterGoal(fixtures[index], removed, -1) };
+    return respond<MatchDetail>({
+      ...fixtures[index],
       events: events[id],
       lineups: lineups[id],
       formation: formations[id],

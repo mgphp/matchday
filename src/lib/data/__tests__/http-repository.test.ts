@@ -344,6 +344,76 @@ describe('createHttpRepository', () => {
     expect(body.events[0].id).toEqual(expect.stringMatching(/^e-/));
   });
 
+  it('addEvent sends a goal and its score in the same PATCH', async () => {
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        jsonResponse({ id: 'm1', status: 'live', homeScore: 1, awayScore: 0, events: [] }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ id: 'm1', events: [] }));
+
+    const repo = createHttpRepository(options);
+    await repo.addEvent('m1', {
+      minute: 20,
+      type: 'goal',
+      side: 'away',
+      player: 'Rivals FC',
+    });
+
+    const [, patch] = fetchMock.mock.calls[1] as [string, RequestInit];
+    const body = JSON.parse(String(patch.body)) as Record<string, unknown>;
+    expect(body).toMatchObject({ homeScore: 1, awayScore: 1 });
+    expect(body.events).toHaveLength(1);
+  });
+
+  it('addEvent leaves the score out of the PATCH for a card', async () => {
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ id: 'm1', homeScore: 1, awayScore: 0, events: [] }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'm1', events: [] }));
+
+    const repo = createHttpRepository(options);
+    await repo.addEvent('m1', { minute: 5, type: 'yellow-card', side: 'home', player: 'Ava' });
+
+    const [, patch] = fetchMock.mock.calls[1] as [string, RequestInit];
+    const body = JSON.parse(String(patch.body)) as Record<string, unknown>;
+    expect(body).not.toHaveProperty('homeScore');
+    expect(body).not.toHaveProperty('awayScore');
+  });
+
+  it('removeEvent drops the event and takes a goal off the score', async () => {
+    const goal = { id: 'e1', minute: 10, type: 'goal', side: 'home', player: 'Ava' };
+    const card = { id: 'e2', minute: 30, type: 'yellow-card', side: 'home', player: 'Ben' };
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        jsonResponse({ id: 'm1', homeScore: 2, awayScore: 1, events: [goal, card] }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ id: 'm1', events: [card] }));
+
+    const repo = createHttpRepository(options);
+    await repo.removeEvent('m1', 'e1');
+
+    const [url, patch] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(url).toBe('https://api.example.com/teams/team-1/matches/m1');
+    expect(patch.method).toBe('PATCH');
+    expect(JSON.parse(String(patch.body))).toEqual({
+      events: [card],
+      homeScore: 1,
+      awayScore: 1,
+    });
+  });
+
+  it('removeEvent rejects an unknown event without PATCHing', async () => {
+    const fetchMock = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ id: 'm1', events: [] }));
+
+    const repo = createHttpRepository(options);
+    await expect(repo.removeEvent('m1', 'nope')).rejects.toThrow('No event nope');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('updateLineup reads the match, merges our side in and PATCHes lineups + formation', async () => {
     const awayLineup: Player[] = [
       { id: 'a1', name: 'Opponent Player', position: 'DF', squadNumber: 4 },
