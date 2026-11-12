@@ -104,6 +104,14 @@ export interface MatchdayRepository {
   updateMatchClock(id: string, update: MatchClockUpdate): Promise<MatchDetail>;
   /** Sets our starting lineup and formation for a match. Rejects when no match exists for the id. */
   updateLineup(id: string, update: LineupUpdate): Promise<MatchDetail>;
-  /** Appends an event to a match's timeline. Rejects when no match exists for the id. */
+  /**
+   * Appends an event to a match's timeline; a goal also adds one to that
+   * side's score. Rejects when no match exists for the id.
+   */
   addEvent(id: string, event: NewMatchEvent): Promise<MatchDetail>;
+  /**
+   * Deletes an event from a match's timeline; a goal also takes one off that
+   * side's score. Rejects when no match or no such event exists.
+   */
+  removeEvent(id: string, eventId: string): Promise<MatchDetail>;
 }

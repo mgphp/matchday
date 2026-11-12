@@ -143,6 +143,47 @@ describe('mockRepository', () => {
     ).rejects.toThrow('No match with id nope');
   });
 
+  it('addEvent adds a goal to the score; a card leaves it alone', async () => {
+    const before = await mockRepository.getMatch('m4');
+    const afterGoal = await mockRepository.addEvent('m4', {
+      minute: 40,
+      type: 'goal',
+      side: 'home',
+      player: 'Callum Reed',
+    });
+    expect(afterGoal.homeScore).toBe((before.homeScore ?? 0) + 1);
+    expect(afterGoal.awayScore).toBe(before.awayScore);
+
+    const afterCard = await mockRepository.addEvent('m4', {
+      minute: 41,
+      type: 'yellow-card',
+      side: 'away',
+      player: 'Rovers player',
+    });
+    expect(afterCard.homeScore).toBe(afterGoal.homeScore);
+    expect(afterCard.awayScore).toBe(afterGoal.awayScore);
+  });
+
+  it('removeEvent drops the event, takes a goal off the score and rejects unknown ids', async () => {
+    const withGoal = await mockRepository.addEvent('m4', {
+      minute: 55,
+      type: 'goal',
+      side: 'away',
+      player: 'Jamie Cole',
+    });
+    const goal = withGoal.events.find((event) => event.minute === 55 && event.type === 'goal')!;
+
+    const updated = await mockRepository.removeEvent('m4', goal.id);
+
+    expect(updated.events.some((event) => event.id === goal.id)).toBe(false);
+    expect(updated.awayScore).toBe((withGoal.awayScore ?? 0) - 1);
+    expect(updated.homeScore).toBe(withGoal.homeScore);
+    await expect(mockRepository.removeEvent('m4', 'nope')).rejects.toThrow('No event nope');
+    await expect(mockRepository.removeEvent('nope', goal.id)).rejects.toThrow(
+      'No match with id nope',
+    );
+  });
+
   it('updatePlayer replaces the matching player in place', async () => {
     const updated = await mockRepository.updatePlayer({
       id: 'p2',
