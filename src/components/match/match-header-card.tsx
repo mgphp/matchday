@@ -173,8 +173,9 @@ export function MatchHeaderCard({
       ) : null}
       {nextBreak ? (
         <Text style={styles.nextSubHint}>
-          {`Next sub ${nextBreak.minute}′`}
-          {nextBreak.minute > minute ? ` (in ${nextBreak.minute - minute} min)` : ''}
+          {nextBreak.minute > minute
+            ? `Next sub ${nextBreak.minute}′ (in ${nextBreak.minute - minute} min)`
+            : 'Sub now'}
           {`: ${[
             ...(nextBreak.keeperChange
               ? [`${nextBreak.keeperChange.keeper.squadNumber} in goal`]

@@ -860,6 +860,24 @@ other keeper as an outfielder. Coaches swap keepers at half time.
 - [x] Tests: planner (full match, swap, bench keeper, unavailable keeper),
       storage hook, screen swap flow.
 
+### M5.14 — Rotation plan: exact equal minutes
+
+Subs were locked to equal blocks (e.g. every 15′), so minutes could only be
+as even as a block — with 9 players one got 15′ more.
+
+- [x] `rotationPlan` levels everyone's total (minutes already played and goal
+      time included), then lays each share end to end across the pitch places
+      (McNaughton wrap-around). Sub times fall where a share runs out, to the
+      nearest minute; players on the pitch now start each place so they stay
+      on. With a keeper swap each half is planned in turn.
+- [x] Plan returns each player's `stints`; the card shows **Sub times** and
+      **Who plays when** (on/off minutes per player). Header says "Sub now"
+      when a sub is overdue.
+- [x] Trade-off (chosen): exact minutes over fewer stoppages — uneven counts
+      or a keeper swap can mean many small subs.
+- [x] Tests: exact split for 7-for-6, spells add up, played minutes counted,
+      swap within 1′.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)

@@ -20,12 +20,22 @@ export interface KeeperChange {
   previous: Player;
 }
 
+/** A spell on the pitch, in whole match minutes: on at `from`, off at `to`. */
+export interface Stint {
+  from: number;
+  to: number;
+  /** In goal for this spell. */
+  inGoal?: boolean;
+}
+
 /** One projected finish, if the plan is followed to full time. */
 export interface ProjectedMinutes {
   player: Player;
   minutes: number;
   /** Minutes of `minutes` spent in goal. */
   inGoal: number;
+  /** Planned spells from now to full time, in order. */
+  stints: Stint[];
 }
 
 /** Every change planned for one minute — what the coach does at that break. */
@@ -71,8 +81,101 @@ export interface RotationPlanInput {
   secondKeeperId?: string;
 }
 
+interface Spell {
+  from: number;
+  to: number;
+  inGoal?: boolean;
+}
+
+const EPS = 1e-6;
+
 /**
- * A live substitution schedule that shares minutes evenly.
+ * Even out minutes over a window: each player gets `clamp(level - base, lo, max)`
+ * where `level` is found so the total is exactly `capacity` (or everyone gets
+ * `max` if even that doesn't fill it).
+ */
+function levelFill(bases: number[], capacity: number, max: number, lo: number[] = []) {
+  const needAt = (level: number) =>
+    bases.map((base, i) => Math.min(max, Math.max(lo[i] ?? 0, level - base)));
+  const sum = (needs: number[]) => needs.reduce((total, need) => total + need, 0);
+  let low = Math.min(0, ...bases) - max;
+  let high = Math.max(0, ...bases) + max * 2 + capacity;
+  if (sum(needAt(high)) <= capacity + EPS) return { needs: needAt(high), level: high };
+  for (let i = 0; i < 100; i++) {
+    const mid = (low + high) / 2;
+    if (sum(needAt(mid)) < capacity) low = mid;
+    else high = mid;
+  }
+  return { needs: needAt(high), level: high };
+}
+
+/**
+ * Lay each player's minutes end to end across `lanes` pitch places, wrapping
+ * at the window's end (McNaughton's rule). Every player gets exactly their
+ * need, no one is in two places at once, and someone already on the pitch is
+ * put at the start of each place so they stay on rather than being swapped
+ * straight away. A player who wraps plays the start and the end of the window.
+ */
+function wrapWindow(
+  from: number,
+  to: number,
+  players: { id: string; need: number; isOn: boolean }[],
+): Map<string, Spell[]> {
+  const width = to - from;
+  const spells = new Map<string, Spell[]>();
+  if (width <= EPS) return spells;
+  const byNeed = (a: { need: number }, b: { need: number }) => b.need - a.need;
+  const on = players.filter((p) => p.isOn && p.need > EPS).sort(byNeed);
+  const bench = players.filter((p) => !p.isOn && p.need > EPS).sort(byNeed);
+
+  let pos = 0;
+  while (on.length + bench.length > 0) {
+    const lane = Math.floor(pos / width + EPS);
+    const offset = pos - lane * width;
+    const nextBoundary = (lane + 1) * width;
+    let pick;
+    if (offset < EPS) {
+      // Start of a pitch place: whoever's on now keeps it.
+      pick = on.shift() ?? bench.shift()!;
+    } else {
+      // Mid-place: a bench player who fits before the place's end comes on;
+      // otherwise an on-pitch player wraps round so they start the next one.
+      const fits = bench.findIndex((p) => pos + p.need <= nextBoundary + EPS);
+      pick = fits >= 0 ? bench.splice(fits, 1)[0] : (on.shift() ?? bench.shift()!);
+    }
+    const list = spells.get(pick.id) ?? [];
+    if (offset + pick.need <= width + EPS) {
+      list.push({ from: from + offset, to: from + Math.min(width, offset + pick.need) });
+    } else {
+      list.push({ from: from + offset, to });
+      list.push({ from, to: from + (offset + pick.need - width) });
+    }
+    spells.set(pick.id, list);
+    pos += pick.need;
+  }
+  return spells;
+}
+
+/** Round to whole minutes, sort and join touching spells. */
+function tidy(spells: Spell[]): Stint[] {
+  const rounded = spells
+    .map((spell) => ({ ...spell, from: Math.round(spell.from), to: Math.round(spell.to) }))
+    .filter((spell) => spell.to > spell.from)
+    .sort((a, b) => a.from - b.from);
+  const merged: Stint[] = [];
+  for (const spell of rounded) {
+    const last = merged[merged.length - 1];
+    if (last && last.to >= spell.from && Boolean(last.inGoal) === Boolean(spell.inGoal)) {
+      last.to = Math.max(last.to, spell.to);
+    } else {
+      merged.push(spell.inGoal ? { ...spell, inGoal: true } : { from: spell.from, to: spell.to });
+    }
+  }
+  return merged;
+}
+
+/**
+ * A live substitution schedule that shares minutes as evenly as possible.
  *
  * The goalkeeper is fixed: one keeper for the whole match, or one per half
  * when `secondKeeperId` is given. Without a swap the keeper is left out of the
@@ -80,15 +183,12 @@ export interface RotationPlanInput {
  * keepers join the outfield rotation for the half they're not in goal, and
  * everyone's total (goal + outfield) is evened out.
  *
- * Each half is split into equal segments — enough that every outfield
- * candidate takes a turn on the bench — and at every break the players with
- * the fewest minutes go on (those already on stay on in a tie, so no pointless
- * swaps). It is recomputed from the live clock and the minutes already
- * played, so a late kick-off or a missed swap corrects itself on the next
- * render.
- *
- * With counts that don't divide cleanly the result is close to even rather
- * than exact — `projected` shows where everyone actually lands.
+ * Minutes are split exactly (to the nearest minute), and the sub times follow
+ * from that rather than from fixed blocks: each player's share is laid end to
+ * end across the pitch places, so a sub falls wherever one player's share runs
+ * out. It is recomputed from the live clock and the minutes already played, so
+ * a late or missed sub corrects itself on the next render; a sub that should
+ * already have happened shows at the current minute.
  *
  * Pure: the caller supplies `elapsed` from the clock and renders the result.
  */
@@ -104,131 +204,170 @@ export function rotationPlan({
     secondKeeperId !== undefined &&
     secondKeeperId !== keeperId &&
     minutes.some((entry) => entry.player.id === secondKeeperId);
-  const half = Math.round(duration / 2);
+  const half = duration / 2;
+  const now = Math.min(Math.max(elapsed, 0), duration);
   const keeperAt = (minute: number) => (swapsKeeper && minute >= half ? secondKeeperId! : keeperId);
 
   // Without a swap the keeper sits outside the rotation entirely.
   const pool = swapsKeeper ? minutes : minutes.filter((entry) => entry.player.id !== keeperId);
-  const slots = onPitchCount + (swapsKeeper ? 1 : 0);
-  const target =
-    pool.length > 0 && onPitchCount > 0 ? Math.round((duration * slots) / pool.length) : 0;
+  const ids = pool.map((entry) => entry.player.id);
+  const played = new Map(pool.map((entry) => [entry.player.id, entry.minutes]));
+  const spells = new Map<string, Spell[]>(ids.map((id) => [id, []]));
+  const add = (id: string, list: Spell[] | undefined) => spells.get(id)?.push(...(list ?? []));
+  const lanes = Math.max(0, onPitchCount);
+  let target = 0;
 
-  // Outfield candidates at any moment: everyone in the pool bar whoever's in goal.
-  const candidates = swapsKeeper ? pool.length - 1 : pool.length;
-  const benchCount = candidates - onPitchCount;
-  const segmentsFor = (span: number) =>
-    benchCount > 0 && onPitchCount > 0
-      ? Math.max(swapsKeeper ? 1 : 2, Math.ceil((candidates / benchCount) * (span / duration)))
-      : 1;
-  const splits = (from: number, to: number) => {
-    const count = segmentsFor(to - from);
-    return Array.from({ length: count - 1 }, (_, i) =>
-      Math.round(from + ((to - from) * (i + 1)) / count),
+  if (!swapsKeeper) {
+    const { needs, level } = levelFill(
+      ids.map((id) => played.get(id)!),
+      lanes * (duration - now),
+      duration - now,
     );
-  };
-  const breakMinutes = swapsKeeper
-    ? [...splits(0, half), half, ...splits(half, duration)]
-    : splits(0, duration);
+    target = pool.length > 0 ? (lanes * duration) / pool.length : 0;
+    if (now > 0) target = level;
+    const wrapped = wrapWindow(
+      now,
+      duration,
+      pool.map((entry, i) => ({ id: entry.player.id, need: needs[i], isOn: entry.isOnPitch })),
+    );
+    for (const id of ids) add(id, wrapped.get(id));
+  } else {
+    const first = keeperId;
+    const second = secondKeeperId!;
+    const remaining = duration - now;
+    const goalLeft = (id: string) =>
+      id === first ? Math.max(0, half - now) : id === second ? duration - Math.max(half, now) : 0;
+    // Everyone's fair total for the match, goal time included.
+    const overall = levelFill(
+      ids.map((id) => played.get(id)!),
+      (lanes + 1) * remaining,
+      remaining,
+      ids.map(goalLeft),
+    );
+    target = overall.level;
+    const isOnNow = new Set(pool.filter((e) => e.isOnPitch).map((e) => e.player.id));
 
-  type Role = 'goal' | 'pitch' | 'bench';
-  const state = pool.map((entry, index) => ({
-    player: entry.player,
-    index,
-    minutes: entry.minutes,
-    inGoal: 0,
-    role: (entry.player.id === keeperAt(elapsed)
-      ? 'goal'
-      : entry.isOnPitch
-        ? 'pitch'
-        : 'bench') as Role,
-  }));
-  // Goal time already played is unknown in detail; credit it from the clock.
-  if (swapsKeeper) {
-    for (const entry of state) {
-      if (entry.player.id === keeperId) entry.inGoal = Math.min(elapsed, half);
-      if (entry.player.id === secondKeeperId) entry.inGoal = Math.max(0, elapsed - half);
+    // First half (if any of it is left): the first keeper in goal, the second
+    // keeper plays outfield for whatever their goal half doesn't cover.
+    const afterFirst = new Map(played);
+    let onAtHalf = isOnNow;
+    if (now < half) {
+      const width = half - now;
+      add(first, [{ from: now, to: half, inGoal: true }]);
+      afterFirst.set(first, played.get(first)! + width);
+      const secondIndex = ids.indexOf(second);
+      const secondNeed = Math.min(
+        width,
+        Math.max(0, overall.needs[secondIndex] - goalLeft(second)),
+      );
+      const others = ids.filter((id) => id !== first && id !== second);
+      const othersFill = levelFill(
+        others.map((id) => played.get(id)!),
+        Math.max(0, lanes * width - secondNeed),
+        width,
+      );
+      const need = new Map(others.map((id, i) => [id, othersFill.needs[i]]));
+      need.set(second, secondNeed);
+      const wrapped = wrapWindow(
+        now,
+        half,
+        [...need].map(([id, n]) => ({ id, need: n, isOn: isOnNow.has(id) })),
+      );
+      onAtHalf = new Set([first]);
+      for (const [id, list] of wrapped) {
+        add(id, list);
+        const total = list.reduce((sum, spell) => sum + spell.to - spell.from, 0);
+        afterFirst.set(id, played.get(id)! + total);
+        if (list.some((spell) => Math.abs(spell.to - half) < EPS)) onAtHalf.add(id);
+      }
     }
+
+    // Second half: the second keeper in goal, everyone else evened out.
+    const from = Math.max(half, now);
+    add(second, [{ from, to: duration, inGoal: true }]);
+    const others = ids.filter((id) => id !== second);
+    const fill = levelFill(
+      others.map((id) => afterFirst.get(id)!),
+      lanes * (duration - from),
+      duration - from,
+    );
+    const wrapped = wrapWindow(
+      from,
+      duration,
+      others.map((id, i) => ({ id, need: fill.needs[i], isOn: onAtHalf.has(id) })),
+    );
+    for (const id of others) add(id, wrapped.get(id));
   }
 
-  let clock = Math.min(elapsed, duration);
-  const advanceTo = (minute: number) => {
-    const to = Math.min(minute, duration);
-    const delta = to - clock;
-    if (delta <= 0) return;
-    for (const entry of state) {
-      if (entry.role === 'bench') continue;
-      entry.minutes += delta;
-      if (entry.role === 'goal') entry.inGoal += delta;
-    }
-    clock = to;
-  };
+  const stints = new Map(ids.map((id) => [id, tidy(spells.get(id)!)]));
+  const byId = new Map(pool.map((entry) => [entry.player.id, entry.player]));
+  const onAt = (t: number) =>
+    new Set(ids.filter((id) => stints.get(id)!.some((s) => s.from <= t && t < s.to)));
 
+  // Walk every planned on/off minute and turn changes into subs.
+  const times = [
+    ...new Set(
+      [...stints.values()]
+        .flat()
+        .flatMap((s) => [s.from, s.to])
+        .concat(Math.round(now))
+        .filter((t) => t >= Math.round(now) && t < duration),
+    ),
+  ].sort((a, b) => a - b);
+  let before = new Set(pool.filter((e) => e.isOnPitch).map((e) => e.player.id));
+  if (!swapsKeeper) before.delete(keeperId);
+  let keeperBefore = swapsKeeper ? keeperAt(now) : undefined;
   const breaks: PlannedBreak[] = [];
-  for (const breakMinute of breakMinutes) {
-    if (breakMinute <= elapsed || breakMinute >= duration) continue;
-    advanceTo(breakMinute);
-
-    const wasOn = new Set(state.filter((e) => e.role !== 'bench').map((e) => e.player.id));
-    const previousKeeper = state.find((e) => e.role === 'goal');
-    const nextKeeperId = keeperAt(breakMinute);
-
-    // Fewest minutes go on; in a tie whoever is already on stays on.
-    const outfield = state
-      .filter((e) => e.player.id !== nextKeeperId)
-      .sort(
-        (a, b) =>
-          a.minutes - b.minutes ||
-          Number(b.role !== 'bench') - Number(a.role !== 'bench') ||
-          a.index - b.index,
-      )
-      .slice(0, onPitchCount);
-    const outfieldIds = new Set(outfield.map((e) => e.player.id));
-    for (const entry of state) {
-      entry.role =
-        entry.player.id === nextKeeperId
-          ? 'goal'
-          : outfieldIds.has(entry.player.id)
-            ? 'pitch'
-            : 'bench';
-    }
-
+  for (const t of times) {
+    const after = onAt(t);
+    const keeperNow = swapsKeeper
+      ? ids.find((id) => stints.get(id)!.some((s) => s.inGoal && s.from <= t && t < s.to))
+      : undefined;
+    const coming = ids.filter((id) => after.has(id) && !before.has(id));
+    const going = ids.filter((id) => before.has(id) && !after.has(id));
     // A keeper straight off the bench into goal is paired with the keeper
     // coming off, so the sub reads the way it happens.
-    const keeperFirst = (id: string | undefined) => (e: (typeof state)[number]) =>
-      e.player.id === id ? -1 : 0;
-    const coming = state
-      .filter((e) => e.role !== 'bench' && !wasOn.has(e.player.id))
-      .sort((x, y) => keeperFirst(nextKeeperId)(x) - keeperFirst(nextKeeperId)(y));
-    const going = state
-      .filter((e) => e.role === 'bench' && wasOn.has(e.player.id))
-      .sort(
-        (x, y) =>
-          keeperFirst(previousKeeper?.player.id)(x) - keeperFirst(previousKeeper?.player.id)(y),
-      );
-    // The pitch holds the same number before and after, so these pair up.
-    const subs = coming
-      .slice(0, going.length)
-      .map((on, i) => ({ minute: breakMinute, on: on.player, off: going[i].player }));
-    const keeper = state.find((e) => e.role === 'goal');
+    const first = (id: string | undefined) => (x: string) => (x === id ? -1 : 0);
+    coming.sort((a, b) => first(keeperNow)(a) - first(keeperNow)(b));
+    going.sort((a, b) => first(keeperBefore)(a) - first(keeperBefore)(b));
+    const subs = coming.slice(0, going.length).map((on, i) => ({
+      minute: t,
+      on: byId.get(on)!,
+      off: byId.get(going[i])!,
+    }));
     const keeperChange =
-      keeper && previousKeeper && keeper !== previousKeeper
-        ? { minute: breakMinute, keeper: keeper.player, previous: previousKeeper.player }
+      keeperNow && keeperBefore && keeperNow !== keeperBefore
+        ? { minute: t, keeper: byId.get(keeperNow)!, previous: byId.get(keeperBefore)! }
         : undefined;
-    if (subs.length > 0 || keeperChange) breaks.push({ minute: breakMinute, subs, keeperChange });
+    if (subs.length > 0 || keeperChange) breaks.push({ minute: t, subs, keeperChange });
+    before = after;
+    if (keeperNow) keeperBefore = keeperNow;
   }
-  advanceTo(duration);
 
   return {
-    target,
+    target: Math.round(target),
     swapsKeeper,
     subs: breaks.flatMap((b) => b.subs),
     keeperChange: breaks.find((b) => b.keeperChange)?.keeperChange,
     breaks,
     nextBreak: breaks[0],
-    projected: state.map((entry) => ({
-      player: entry.player,
-      minutes: Math.round(entry.minutes),
-      inGoal: swapsKeeper ? Math.round(entry.inGoal) : 0,
-    })),
+    projected: pool.map((entry) => {
+      const planned = stints.get(entry.player.id)!;
+      const future = planned.reduce((sum, s) => sum + s.to - s.from, 0);
+      const goalFuture = planned.reduce((sum, s) => sum + (s.inGoal ? s.to - s.from : 0), 0);
+      const goalPast = !swapsKeeper
+        ? 0
+        : entry.player.id === keeperId
+          ? Math.min(now, half)
+          : entry.player.id === secondKeeperId
+            ? Math.max(0, now - half)
+            : 0;
+      return {
+        player: entry.player,
+        minutes: Math.round(entry.minutes + future),
+        inGoal: swapsKeeper ? Math.round(goalPast + goalFuture) : 0,
+        stints: planned,
+      };
+    }),
   };
 }

@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/card';
 import { ChoiceChips } from '@/components/choice-chips';
 import { SectionHeader } from '@/components/section-header';
-import type { RotationPlan } from '@/lib/rotation-plan';
+import type { RotationPlan, Stint } from '@/lib/rotation-plan';
 import type { Player } from '@/lib/types';
 import { colors, spacing, typography } from '@/theme/theme';
 
@@ -19,6 +19,11 @@ export function RotationPlanPrompt() {
       </Text>
     </Card>
   );
+}
+
+/** e.g. "0–43′, GK 51–60′" — when a player is on, in match minutes. */
+export function stintsText(stints: Stint[]) {
+  return stints.map((s) => `${s.inGoal ? 'GK ' : ''}${s.from}–${s.to}′`).join(', ');
 }
 
 const KEEPER_MODES = ['full', 'swap'] as const;
@@ -81,10 +86,10 @@ export function RotationPlanCard({
       ) : null}
       <Text style={styles.target}>
         {plan.swapsKeeper
-          ? `Even share ≈ ${plan.target}′ each, goal time included · ${
+          ? `Equal share ≈ ${plan.target}′ each, goal time included · ${
               firstHalfKeeper?.name ?? 'keeper'
             } then ${secondKeeper?.name ?? 'keeper'} in goal`
-          : `Even outfield share ≈ ${plan.target}′ each · goalkeeper plays the full match`}
+          : `Equal outfield share ≈ ${plan.target}′ each · goalkeeper plays the full match`}
       </Text>
       {isPreMatch ? (
         <Text style={shared.hint}>
@@ -95,6 +100,7 @@ export function RotationPlanCard({
       {isPreMatch && plan.subs.length === 0 ? (
         <Text style={shared.emptyText}>No one on the bench — everyone plays the full match.</Text>
       ) : null}
+      {plan.breaks.length > 0 ? <Text style={shared.groupLabel}>Sub times</Text> : null}
       {plan.breaks.map(({ minute: at, subs, keeperChange }) => (
         <View
           key={at}
@@ -133,7 +139,7 @@ export function RotationPlanCard({
       ))}
       {isPreMatch ? (
         <>
-          <Text style={shared.groupLabel}>Planned minutes</Text>
+          <Text style={shared.groupLabel}>Who plays when</Text>
           {keeper && !plan.swapsKeeper ? (
             <View
               accessibilityLabel={`${keeper.name}, goalkeeper, planned ${duration} minutes`}
@@ -141,29 +147,24 @@ export function RotationPlanCard({
             >
               <Text style={shared.number}>{keeper.squadNumber}</Text>
               <Text style={shared.name}>{keeper.name}</Text>
-              <Text style={shared.hint}>goalkeeper</Text>
+              <Text style={[shared.hint, styles.when]}>GK 0–{duration}&#8242;</Text>
               <Text style={shared.value}>{duration}&#8242;</Text>
             </View>
           ) : null}
-          {plan.projected.map(({ player, minutes: planned, inGoal }) => {
+          {plan.projected.map(({ player, minutes: planned, stints }) => {
             const starts = lineup?.some((starter) => starter.id === player.id) ?? false;
-            const role =
-              inGoal <= 0
-                ? undefined
-                : player.id === secondKeeper?.id
-                  ? 'GK 2nd half'
-                  : 'GK 1st half';
+            const when = stintsText(stints);
             return (
               <View
                 key={player.id}
                 accessibilityLabel={`${player.name}, ${
                   starts ? 'starts' : 'starts on the bench'
-                }${role ? `, ${role}` : ''}, planned ${planned} minutes`}
+                }, on ${when}, planned ${planned} minutes`}
                 style={shared.row}
               >
                 <Text style={shared.number}>{player.squadNumber}</Text>
                 <Text style={[shared.name, !starts && shared.nameBench]}>{player.name}</Text>
-                <Text style={shared.hint}>{role ?? (starts ? 'starts' : 'bench')}</Text>
+                <Text style={[shared.hint, styles.when]}>{when}</Text>
                 <Text style={shared.value}>{planned}&#8242;</Text>
               </View>
             );
@@ -175,6 +176,10 @@ export function RotationPlanCard({
 }
 
 const styles = StyleSheet.create({
+  when: {
+    flexShrink: 1,
+    textAlign: 'right',
+  },
   target: {
     ...typography.caption,
     color: colors.textSecondary,
