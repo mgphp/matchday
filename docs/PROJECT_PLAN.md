@@ -660,6 +660,7 @@ couldn't be reached.
 - [x] The list scrolls inside its card; the card shrinks to fit the screen
       (`flexShrink: 1`) but still hugs a short squad.
 - [x] Test: a 20-player squad renders a scrollable list.
+
 ### M17 — Pre-match rotation plan
 
 The sub schedule only appeared once a match was live. A coach wants it before
