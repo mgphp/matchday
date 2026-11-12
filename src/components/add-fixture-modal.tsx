@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
@@ -7,8 +7,15 @@ import { DatePicker } from '@/components/date-picker';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { TextField } from '@/components/text-field';
+import { TimePicker } from '@/components/time-picker';
 import type { NewFixtureInput } from '@/lib/data/repository';
 import { describeFixture, findClashingFixture } from '@/lib/fixture-clash';
+import {
+  DEFAULT_COMPETITION,
+  deriveShortName,
+  loadLastCompetition,
+  saveLastCompetition,
+} from '@/lib/fixture-defaults';
 import type { Match, Team } from '@/lib/types';
 import { colors, typography } from '@/theme/theme';
 
@@ -45,11 +52,26 @@ export function AddFixtureModal({
   const [side, setSide] = useState<Side | null>(null);
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastCompetition, setLastCompetition] = useState('');
+
+  // Prefill Competition with whatever this team used last time.
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+    void loadLastCompetition(ownTeam.id).then((stored) => {
+      if (cancelled) return;
+      setLastCompetition(stored);
+      setCompetition((current) => current || stored);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, ownTeam.id]);
+
+  const derivedShortName = deriveShortName(opponentName);
 
   const isComplete =
     opponentName.trim().length > 0 &&
-    opponentShortName.trim().length > 0 &&
-    competition.trim().length > 0 &&
     DATE_PATTERN.test(date) &&
     TIME_PATTERN.test(time) &&
     side !== null;
@@ -64,7 +86,7 @@ export function AddFixtureModal({
   const reset = () => {
     setOpponentName('');
     setOpponentShortName('');
-    setCompetition('');
+    setCompetition(lastCompetition);
     setVenue('');
     setDate('');
     setTime('');
@@ -85,10 +107,11 @@ export function AddFixtureModal({
       const opponent: Team = {
         id: generateOpponentId(),
         name: opponentName.trim(),
-        shortName: opponentShortName.trim().toUpperCase(),
+        shortName: (opponentShortName.trim() || derivedShortName).toUpperCase(),
       };
+      const chosenCompetition = competition.trim() || DEFAULT_COMPETITION;
       await onSubmit({
-        competition: competition.trim(),
+        competition: chosenCompetition,
         // Stored as a literal UTC-labelled wall-clock time, matching every
         // other kickoff in this app (see mock-repository / seed data).
         kickoff: `${date}T${time}:00Z`,
@@ -96,7 +119,10 @@ export function AddFixtureModal({
         home: side === 'home' ? ownTeam : opponent,
         away: side === 'home' ? opponent : ownTeam,
       });
+      await saveLastCompetition(ownTeam.id, chosenCompetition);
+      setLastCompetition(chosenCompetition);
       reset();
+      setCompetition(chosenCompetition);
       onClose();
     } catch {
       setError('Could not add the fixture. Try again.');
@@ -128,18 +154,19 @@ export function AddFixtureModal({
         />
         <TextField label="Opponent" value={opponentName} onChangeText={setOpponentName} />
         <TextField
-          label="Opponent short name (e.g. HBC)"
+          label="Short name (optional)"
           value={opponentShortName}
           onChangeText={setOpponentShortName}
           autoCapitalize="characters"
+          placeholder={derivedShortName || 'e.g. HBC'}
         />
-        <TextField label="Competition" value={competition} onChangeText={setCompetition} />
         <DatePicker label="Date" value={date} onChange={setDate} />
+        <TimePicker label="Kick-off" value={time} onChange={setTime} />
         <TextField
-          label="Kick-off time (HH:MM)"
-          value={time}
-          onChangeText={setTime}
-          placeholder="10:00"
+          label="Competition (optional)"
+          value={competition}
+          onChangeText={setCompetition}
+          placeholder={DEFAULT_COMPETITION}
         />
         <TextField label="Ground (optional)" value={venue} onChangeText={setVenue} />
         {clash ? (

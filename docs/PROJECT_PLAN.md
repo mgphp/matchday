@@ -792,6 +792,23 @@ the sub plan were wrong for small-sided football until each match was edited.
 - **Not done here:** the format is per device, not synced to `matchday-api`
   (fits with the Settings rebuild, #69).
 
+### M5.10 — Quicker Add fixture ([#78](https://github.com/mgphp/matchday/issues/78))
+
+Kick-off was a typed `HH:MM` field, and short name and competition were
+required, so every fixture meant six fields.
+
+- [x] `src/components/time-picker.tsx` — inline 15-minute slot grid, same
+      shape as `DatePicker`: 09:00–14:00 by default, **More times** for
+      07:00–21:00.
+- [x] `src/lib/fixture-defaults.ts` — `deriveShortName` (initials for
+      multi-word names, else first three letters; skips FC/AFC/club filler and
+      age groups like U10), plus the last competition per team on-device.
+- [x] Add fixture: short name optional (derived name as placeholder and
+      default); competition optional, prefilled with the last one used,
+      blank saves as "Friendly". Opponent + date + time + home/away is enough.
+- [x] Tests: short-name rules, minimal fixture, override, competition
+      remembered/prefilled, More times.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)
