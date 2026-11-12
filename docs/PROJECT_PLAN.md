@@ -660,6 +660,7 @@ couldn't be reached.
 - [x] The list scrolls inside its card; the card shrinks to fit the screen
       (`flexShrink: 1`) but still hugs a short squad.
 - [x] Test: a 20-player squad renders a scrollable list.
+
 ### M17 — Pre-match rotation plan
 
 The sub schedule only appeared once a match was live. A coach wants it before
@@ -681,6 +682,16 @@ kick-off, to know who comes on when.
       minutes, unavailable player excluded, no bench).
 - **Known gap:** sub times split the match into equal spells and aren't
   aligned to half time.
+
+### M5.4 — Newest results first ([#68](https://github.com/mgphp/matchday/issues/68))
+
+The API returns fixtures oldest-first and the Matches list never re-sorted, so
+"Previous" opened on the first game of the season.
+
+- [x] Grouping moved to `src/lib/fixture-sections.ts`: Upcoming soonest first,
+      Previous most recent first. Favourite-team pinning unchanged (it goes
+      with #69).
+- [x] Unit tests for both orders, section order, pinning and no input mutation.
 
 ## Definition of done (every milestone)
 
