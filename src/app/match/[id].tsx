@@ -1,247 +1,37 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView } from 'react-native';
 
-import { Badge } from '@/components/badge';
-import { Button } from '@/components/button';
-import { Card } from '@/components/card';
 import { EditLineupModal } from '@/components/edit-lineup-modal';
 import { EditMatchModal } from '@/components/edit-match-modal';
+import { EventsCard } from '@/components/match/events-card';
+import { LineupCard } from '@/components/match/lineup-card';
+import { MatchHeaderCard } from '@/components/match/match-header-card';
+import { MinutesCard } from '@/components/match/minutes-card';
+import { RotationPlanCard, RotationPlanPrompt } from '@/components/match/rotation-plan-card';
 import { RecordEventModal } from '@/components/record-event-modal';
 import { Screen } from '@/components/screen';
-import { SectionHeader } from '@/components/section-header';
 import { StateView } from '@/components/state-view';
 import { SubstitutionModal } from '@/components/substitution-modal';
 import { repository } from '@/lib/data';
 import {
   applyClockAction,
-  CLOCK_ACTION_LABELS,
   displayMinute,
   nextClockAction,
   runningPeriod,
   type ClockAction,
 } from '@/lib/match-clock';
-import { isAvailable } from '@/lib/availability';
 import { useMatchFormat } from '@/lib/match-format';
-import { playerMinutes } from '@/lib/player-minutes';
-import { dueOff, dueOn, rotation, type RotationEntry } from '@/lib/rotation';
-import { rotationPlan, type PlannedSub } from '@/lib/rotation-plan';
+import { matchRotation } from '@/lib/match-rotation';
 import { useTeam } from '@/lib/team-context';
-import type { MatchDetail, MatchEvent, Player } from '@/lib/types';
 import { useData } from '@/lib/use-data';
 import { useNow } from '@/lib/use-now';
-import { colors, spacing, typography } from '@/theme/theme';
+import { colors, spacing } from '@/theme/theme';
 
 /** How often a live match refetches in the background. */
 const LIVE_POLL_MS = 30_000;
 /** How often the derived clock re-renders while a period is running. */
 const CLOCK_TICK_MS = 1_000;
-
-function statusBadge(match: MatchDetail, minute: number, action: ClockAction | undefined) {
-  switch (match.status) {
-    case 'live':
-      // Paused between periods — the clock is stopped, so say so rather than
-      // showing a "LIVE" minute that isn't moving.
-      return action === 'second-half' ? (
-        <Badge label={`Half time ${minute}'`} variant="alert" />
-      ) : (
-        <Badge label={`LIVE ${minute}'`} variant="live" />
-      );
-    case 'postponed':
-      return <Badge label="Postponed" variant="alert" />;
-    case 'finished':
-      return <Badge label="Full time" />;
-    case 'scheduled':
-      return <Badge label="Kick-off upcoming" />;
-  }
-}
-
-function eventIcon(type: MatchEvent['type']) {
-  switch (type) {
-    case 'goal':
-      return <Ionicons name="football" size={16} color={colors.accent} />;
-    case 'yellow-card':
-      return <View style={[styles.cardIcon, { backgroundColor: colors.alert }]} />;
-    case 'red-card':
-      return <View style={[styles.cardIcon, { backgroundColor: colors.danger }]} />;
-    case 'substitution':
-      return <Ionicons name="swap-horizontal" size={16} color={colors.textSecondary} />;
-  }
-}
-
-const EVENT_NAMES: Record<MatchEvent['type'], string> = {
-  goal: 'goal',
-  'yellow-card': 'yellow card',
-  'red-card': 'red card',
-  substitution: 'substitution',
-};
-
-/**
- * One timeline row. The bin icon expands to an inline Cancel / Remove confirm
- * (same no-OS-dialog style as removing a fixture) — a mis-tapped goal is
- * common on a touchline, and deleting one also takes it off the score.
- */
-function EventRow({ event, onRemove }: { event: MatchEvent; onRemove: () => Promise<void> }) {
-  const [isConfirming, setIsConfirming] = useState(false);
-  const [isRemoving, setIsRemoving] = useState(false);
-  const [error, setError] = useState(false);
-  const description = `${event.minute} minute ${EVENT_NAMES[event.type]}, ${event.player}`;
-
-  const handleRemove = async () => {
-    setError(false);
-    setIsRemoving(true);
-    try {
-      await onRemove();
-    } catch {
-      setError(true);
-      setIsRemoving(false);
-      setIsConfirming(false);
-    }
-  };
-
-  return (
-    <View>
-      <View style={styles.eventRow}>
-        <Text style={styles.minute}>{event.minute}&#8242;</Text>
-        {eventIcon(event.type)}
-        <Text style={styles.eventPlayer}>{event.player}</Text>
-        {event.detail ? <Text style={styles.eventDetail}>{event.detail}</Text> : null}
-        <View style={styles.eventSpacer} />
-        {isConfirming ? (
-          <>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Cancel"
-              onPress={() => setIsConfirming(false)}
-              disabled={isRemoving}
-              style={styles.eventAction}
-            >
-              <Text style={styles.eventCancel}>Cancel</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Confirm remove ${description}`}
-              onPress={handleRemove}
-              disabled={isRemoving}
-              style={styles.eventAction}
-            >
-              <Text style={styles.eventRemove}>{isRemoving ? 'Removing…' : 'Remove'}</Text>
-            </Pressable>
-          </>
-        ) : (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Remove ${description}`}
-            onPress={() => setIsConfirming(true)}
-            hitSlop={spacing.sm}
-            style={styles.eventAction}
-          >
-            <Ionicons name="trash-outline" size={16} color={colors.textSecondary} />
-          </Pressable>
-        )}
-      </View>
-      {error ? (
-        <Text style={styles.eventError}>Could not remove this event. Try again.</Text>
-      ) : null}
-    </View>
-  );
-}
-
-function LineupColumn({
-  title,
-  players,
-  formation,
-}: {
-  title: string;
-  players: Player[];
-  formation?: string;
-}) {
-  return (
-    <View style={styles.lineupColumn}>
-      <Text style={styles.lineupTitle}>
-        {title}
-        {formation ? ` (${formation})` : ''}
-      </Text>
-      {players.map((player) => (
-        <Text key={player.id} style={styles.lineupPlayer}>
-          {player.squadNumber} {player.name}
-        </Text>
-      ))}
-    </View>
-  );
-}
-
-const ROTATION_LABELS: Record<RotationEntry['status'], string> = {
-  under: 'due on',
-  'on-track': 'on track',
-  over: 'due off',
-};
-
-/** Planned subs bucketed by the minute they happen at, minute ascending. */
-function subsByMinute(subs: PlannedSub[]): { minute: number; swaps: PlannedSub[] }[] {
-  const groups = new Map<number, PlannedSub[]>();
-  for (const sub of subs) {
-    groups.set(sub.minute, [...(groups.get(sub.minute) ?? []), sub]);
-  }
-  return [...groups.entries()]
-    .sort(([a], [b]) => a - b)
-    .map(([minute, swaps]) => ({ minute, swaps }));
-}
-
-function MinutesRow({ entry }: { entry: RotationEntry }) {
-  return (
-    <View
-      accessibilityLabel={`${entry.player.name}, ${entry.minutes} minutes played of ${
-        entry.target
-      } target, ${entry.isOnPitch ? 'on the pitch' : 'on the bench'}, ${
-        ROTATION_LABELS[entry.status]
-      }`}
-      style={styles.minutesRow}
-    >
-      <Text style={styles.minutesNumber}>{entry.player.squadNumber}</Text>
-      <Text style={[styles.minutesName, !entry.isOnPitch && styles.minutesNameBench]}>
-        {entry.player.name}
-      </Text>
-      {entry.status !== 'on-track' ? (
-        <Text style={entry.status === 'under' ? styles.rotationUnder : styles.rotationOver}>
-          {ROTATION_LABELS[entry.status]}
-        </Text>
-      ) : null}
-      <Text style={styles.minutesValue}>
-        {entry.minutes}
-        <Text style={styles.minutesTarget}>/{entry.target}&#8242;</Text>
-      </Text>
-    </View>
-  );
-}
-
-function scoreline(match: MatchDetail) {
-  if (match.status === 'scheduled' || match.status === 'postponed') {
-    return `${match.home.name} v ${match.away.name}`;
-  }
-  return `${match.home.name} ${match.homeScore} – ${match.awayScore} ${match.away.name}`;
-}
-
-/** e.g. "Callum Reed 12′, 79′\nJamie Cole 27′" — one line per scorer, minutes ascending. */
-function scorersFor(events: MatchEvent[], side: MatchEvent['side']) {
-  const minutesByPlayer = new Map<string, number[]>();
-  for (const event of events) {
-    if (event.type !== 'goal' || event.side !== side) continue;
-    const minutes = minutesByPlayer.get(event.player) ?? [];
-    minutes.push(event.minute);
-    minutesByPlayer.set(event.player, minutes);
-  }
-  return [...minutesByPlayer.entries()]
-    .map(
-      ([player, minutes]) =>
-        `${player} ${minutes
-          .sort((a, b) => a - b)
-          .map((minute) => `${minute}′`)
-          .join(', ')}`,
-    )
-    .join('\n');
-}
 
 export default function MatchDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -296,93 +86,17 @@ export default function MatchDetailScreen() {
     );
   }
 
-  const homeScorers = scorersFor(data.events, 'home');
-  const awayScorers = scorersFor(data.events, 'away');
   const ownSide = data.home.id === ownTeam.id ? 'home' : 'away';
   const minute = displayMinute(data, now);
+  // No length of its own → the team's format default (Settings).
+  const duration = data.durationMinutes ?? format.durationMinutes;
+  const rota = matchRotation({ match: data, squad, side: ownSide, minute, duration });
   // Only offer a substitution once the match has actually started — before
   // kick-off "who is on the pitch" is just the starting lineup, edited via
   // the lineup editor instead.
   const canSubstitute = data.status === 'live';
   // Goals and cards can also be filled in after the final whistle.
   const canRecordEvent = data.status === 'live' || data.status === 'finished';
-
-  // Minutes only mean something once the match is under way; before kick-off
-  // every player sits on zero, which is just noise.
-  const hasStarted = data.status === 'live' || data.status === 'finished';
-  const ourLineup = data.lineups?.[ownSide];
-  const minutesPlayed =
-    hasStarted && ourLineup && squad
-      ? playerMinutes({
-          starting: ourLineup,
-          events: data.events,
-          side: ownSide,
-          squad,
-          elapsed: minute,
-        })
-      : undefined;
-  // Anyone not at this match is excluded before targets are worked out, so a
-  // missing player doesn't drag everyone else's share down.
-  const availableMinutes = minutesPlayed?.filter((entry) => isAvailable(data, entry.player.id));
-  const missing = minutesPlayed?.filter((entry) => !isAvailable(data, entry.player.id)) ?? [];
-  // No length of its own → the team's format default (Settings).
-  const duration = data.durationMinutes ?? format.durationMinutes;
-  const rotationEntries = availableMinutes
-    ? rotation({
-        minutes: availableMinutes,
-        onPitchCount: ourLineup?.length ?? 0,
-        duration,
-        elapsed: minute,
-      })
-    : undefined;
-  const onPitch = rotationEntries?.filter((entry) => entry.isOnPitch) ?? [];
-  const bench = rotationEntries?.filter((entry) => !entry.isOnPitch) ?? [];
-  const nextOn = rotationEntries ? dueOn(rotationEntries) : undefined;
-  const nextOff = rotationEntries ? dueOff(rotationEntries) : undefined;
-
-  // Forward sub schedule for even outfield minutes. The keeper is held out of
-  // the maths (they can still be swapped by hand via the substitution modal).
-  const keeper = ourLineup?.find((player) => player.position === 'GK') ?? ourLineup?.[0];
-  const outfieldOnPitch = (ourLineup?.length ?? 0) - (keeper ? 1 : 0);
-  // Before kick-off the same plan is worked out from the starting lineup with
-  // everyone on zero, so the coach can see the whole match's subs in advance.
-  const isPreMatch = data.status === 'scheduled';
-  const preMatchMinutes =
-    isPreMatch && ourLineup && ourLineup.length > 0 && squad
-      ? playerMinutes({ starting: ourLineup, events: [], side: ownSide, squad, elapsed: 0 }).filter(
-          (entry) => isAvailable(data, entry.player.id),
-        )
-      : undefined;
-  const outfieldMinutes = (isPreMatch ? preMatchMinutes : availableMinutes)?.filter(
-    (entry) => entry.player.id !== keeper?.id,
-  );
-  const plan =
-    (data.status === 'live' || isPreMatch) &&
-    outfieldMinutes &&
-    outfieldMinutes.length > 0 &&
-    outfieldOnPitch > 0
-      ? rotationPlan({
-          minutes: outfieldMinutes,
-          onPitchCount: outfieldOnPitch,
-          duration,
-          elapsed: minute,
-        })
-      : undefined;
-  const nextBreak = plan?.nextSub
-    ? plan.subs.filter((sub) => sub.minute === plan.nextSub!.minute)
-    : [];
-
-  const running = runningPeriod(data.periods);
-  const periodLabel =
-    data.status !== 'live'
-      ? undefined
-      : running
-        ? running.period === 'first'
-          ? '1st half'
-          : '2nd half'
-        : clockAction === 'second-half'
-          ? 'Half time'
-          : undefined;
 
   return (
     <Screen>
@@ -392,239 +106,50 @@ export default function MatchDetailScreen() {
           <RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={colors.accent} />
         }
       >
-        <Card>
-          <View style={styles.headerRow}>
-            {statusBadge(data, minute, clockAction)}
-            <Text style={styles.competition}>{data.competition}</Text>
-          </View>
-          <Text style={styles.score}>{scoreline(data)}</Text>
-          {homeScorers || awayScorers ? (
-            <View style={styles.scorersRow}>
-              <Text style={styles.scorersText}>{homeScorers}</Text>
-              <Text style={[styles.scorersText, styles.scorersAway]}>{awayScorers}</Text>
-            </View>
-          ) : null}
-          <Text style={styles.venue}>{data.venue}</Text>
-          {data.status === 'live' ? (
-            <View
-              style={styles.clockBlock}
-              accessibilityLabel={`Match clock, ${minute} minutes${
-                periodLabel ? `, ${periodLabel}` : ''
-              }`}
-            >
-              <Text style={styles.clockMinute}>{minute}&#8242;</Text>
-              {periodLabel ? <Text style={styles.clockPeriod}>{periodLabel}</Text> : null}
-            </View>
-          ) : null}
-          {clockAction ? (
-            <Button
-              label={isUpdatingClock ? 'Saving…' : CLOCK_ACTION_LABELS[clockAction]}
-              onPress={() => handleClockAction(clockAction)}
-              disabled={isUpdatingClock}
-            />
-          ) : null}
-          <View style={styles.actionsRow}>
-            <Button
-              label="Edit match"
-              variant="secondary"
-              style={styles.action}
-              onPress={() => setIsEditing(true)}
-            />
-            <Button
-              label="Edit lineup"
-              variant="secondary"
-              style={styles.action}
-              onPress={() => setIsEditingLineup(true)}
-            />
-            {canRecordEvent ? (
-              <Button
-                label="Goal / card"
-                variant="secondary"
-                style={styles.action}
-                onPress={() => setIsRecordingEvent(true)}
-              />
-            ) : null}
-            {canSubstitute ? (
-              <Button
-                label="Substitution"
-                variant="secondary"
-                style={styles.action}
-                onPress={() => setIsSubstituting(true)}
-              />
-            ) : null}
-          </View>
-          {canSubstitute && (nextOn || nextOff) ? (
-            <Text style={styles.rotationHint}>
-              {nextOff ? `Due off: ${nextOff.player.name}` : null}
-              {nextOff && nextOn ? ' · ' : null}
-              {nextOn ? `Due on: ${nextOn.player.name}` : null}
-            </Text>
-          ) : null}
-          {plan?.nextSub ? (
-            <Text style={styles.nextSubHint}>
-              {`Next sub ${plan.nextSub.minute}′`}
-              {plan.nextSub.minute > minute ? ` (in ${plan.nextSub.minute - minute} min)` : ''}
-              {`: ${nextBreak
-                .map((sub) => `${sub.on.squadNumber} for ${sub.off.squadNumber}`)
-                .join(', ')}`}
-            </Text>
-          ) : null}
-        </Card>
+        <MatchHeaderCard
+          match={data}
+          minute={minute}
+          clockAction={clockAction}
+          isUpdatingClock={isUpdatingClock}
+          onClockAction={handleClockAction}
+          onEditMatch={() => setIsEditing(true)}
+          onEditLineup={() => setIsEditingLineup(true)}
+          onRecordEvent={canRecordEvent ? () => setIsRecordingEvent(true) : undefined}
+          onSubstitute={canSubstitute ? () => setIsSubstituting(true) : undefined}
+          nextOn={rota.nextOn}
+          nextOff={rota.nextOff}
+          plan={rota.plan}
+        />
 
-        {minutesPlayed ? (
-          <Card>
-            <SectionHeader title="Minutes played" variant="accent" />
-            <Text style={styles.minutesGroupLabel}>On pitch</Text>
-            {onPitch.map((entry) => (
-              <MinutesRow key={entry.player.id} entry={entry} />
-            ))}
-            {bench.length > 0 ? (
-              <>
-                <Text style={styles.minutesGroupLabel}>Bench</Text>
-                {bench.map((entry) => (
-                  <MinutesRow key={entry.player.id} entry={entry} />
-                ))}
-              </>
-            ) : null}
-            {missing.length > 0 ? (
-              <>
-                <Text style={styles.minutesGroupLabel}>Not available</Text>
-                {missing.map((entry) => (
-                  <View
-                    key={entry.player.id}
-                    accessibilityLabel={`${entry.player.name}, not available for this match`}
-                    style={styles.minutesRow}
-                  >
-                    <Text style={styles.minutesNumber}>{entry.player.squadNumber}</Text>
-                    <Text style={[styles.minutesName, styles.minutesNameUnavailable]}>
-                      {entry.player.name}
-                    </Text>
-                  </View>
-                ))}
-              </>
-            ) : null}
-          </Card>
+        {rota.hasMinutes ? (
+          <MinutesCard onPitch={rota.onPitch} bench={rota.bench} missing={rota.missing} />
         ) : null}
 
-        {plan && (isPreMatch || plan.subs.length > 0) ? (
-          <Card>
-            <SectionHeader title="Rotation plan" variant="accent" />
-            <Text style={styles.planTarget}>
-              Even share ≈ {plan.target}&#8242; each · goalkeeper isn&#8217;t rotated
-            </Text>
-            {isPreMatch ? (
-              <Text style={styles.rotationHint}>
-                Planned for a {duration}&#8242; match — change it for this match in Edit match, or
-                for every match in Settings.
-              </Text>
-            ) : null}
-            {isPreMatch && plan.subs.length === 0 ? (
-              <Text style={styles.emptyText}>
-                No one on the bench — everyone plays the full match.
-              </Text>
-            ) : null}
-            {subsByMinute(plan.subs).map(({ minute: at, swaps }) => (
-              <View
-                key={at}
-                style={styles.planBreak}
-                accessibilityLabel={`At ${at} minutes: ${swaps
-                  .map((sub) => `${sub.on.name} on for ${sub.off.name}`)
-                  .join(', ')}`}
-              >
-                <Text style={styles.planMinute}>{at}&#8242;</Text>
-                <View style={styles.planSwaps}>
-                  {swaps.map((sub) => (
-                    <Text key={`${sub.on.id}-${sub.off.id}`} style={styles.planSwap}>
-                      <Text style={styles.planOn}>
-                        &#8593; {sub.on.squadNumber} {sub.on.name}
-                      </Text>
-                      {'   '}
-                      <Text style={styles.planOff}>
-                        &#8595; {sub.off.squadNumber} {sub.off.name}
-                      </Text>
-                    </Text>
-                  ))}
-                </View>
-              </View>
-            ))}
-            {isPreMatch ? (
-              <>
-                <Text style={styles.minutesGroupLabel}>Planned minutes</Text>
-                {keeper ? (
-                  <View
-                    accessibilityLabel={`${keeper.name}, goalkeeper, planned ${duration} minutes`}
-                    style={styles.minutesRow}
-                  >
-                    <Text style={styles.minutesNumber}>{keeper.squadNumber}</Text>
-                    <Text style={styles.minutesName}>{keeper.name}</Text>
-                    <Text style={styles.rotationHint}>goalkeeper</Text>
-                    <Text style={styles.minutesValue}>{duration}&#8242;</Text>
-                  </View>
-                ) : null}
-                {plan.projected.map(({ player, minutes: planned }) => {
-                  const starts = ourLineup?.some((starter) => starter.id === player.id) ?? false;
-                  return (
-                    <View
-                      key={player.id}
-                      accessibilityLabel={`${player.name}, ${
-                        starts ? 'starts' : 'starts on the bench'
-                      }, planned ${planned} minutes`}
-                      style={styles.minutesRow}
-                    >
-                      <Text style={styles.minutesNumber}>{player.squadNumber}</Text>
-                      <Text style={[styles.minutesName, !starts && styles.minutesNameBench]}>
-                        {player.name}
-                      </Text>
-                      <Text style={styles.rotationHint}>{starts ? 'starts' : 'bench'}</Text>
-                      <Text style={styles.minutesValue}>{planned}&#8242;</Text>
-                    </View>
-                  );
-                })}
-              </>
-            ) : null}
-          </Card>
-        ) : isPreMatch && !ourLineup?.length ? (
-          <Card>
-            <SectionHeader title="Rotation plan" variant="accent" />
-            <Text style={styles.emptyText}>
-              Set your lineup to see when to make each sub and how long everyone plays.
-            </Text>
-          </Card>
+        {rota.plan && (rota.isPreMatch || rota.plan.subs.length > 0) ? (
+          <RotationPlanCard
+            plan={rota.plan}
+            isPreMatch={rota.isPreMatch}
+            duration={duration}
+            keeper={rota.keeper}
+            lineup={rota.lineup}
+          />
+        ) : rota.isPreMatch && !rota.lineup?.length ? (
+          <RotationPlanPrompt />
         ) : null}
 
-        <Card>
-          <SectionHeader title="Events" variant="accent" />
-          {data.events.length === 0 ? (
-            <Text style={styles.emptyText}>No events yet.</Text>
-          ) : (
-            data.events.map((event) => (
-              <EventRow
-                key={event.id}
-                event={event}
-                onRemove={async () => {
-                  await repository.removeEvent(data.id, event.id);
-                  await refresh();
-                }}
-              />
-            ))
-          )}
-        </Card>
+        <EventsCard
+          events={data.events}
+          onRemove={async (eventId) => {
+            await repository.removeEvent(data.id, eventId);
+            await refresh();
+          }}
+        />
 
-        <Card>
-          <SectionHeader title="Lineup" variant="accent" />
-          {ourLineup && ourLineup.length > 0 ? (
-            // Only our side: the app never records the opponent's lineup.
-            <LineupColumn
-              title={data[ownSide].shortName}
-              players={ourLineup}
-              formation={data.formation}
-            />
-          ) : (
-            <Text style={styles.emptyText}>
-              No lineup set yet — use Edit lineup to pick your team.
-            </Text>
-          )}
-        </Card>
+        <LineupCard
+          title={data[ownSide].shortName}
+          players={rota.lineup}
+          formation={data.formation}
+        />
       </ScrollView>
       <EditMatchModal
         visible={isEditing}
@@ -677,210 +202,3 @@ export default function MatchDetailScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  competition: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  score: {
-    ...typography.title,
-    color: colors.text,
-  },
-  scorersRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  scorersText: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    flex: 1,
-  },
-  scorersAway: {
-    textAlign: 'right',
-  },
-  venue: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    // Up to four actions on a live match — wrap rather than squash them.
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  action: {
-    // Two per row on a phone: equal widths, never squashed below a readable
-    // label. A lone last button stretches to fill its row.
-    flexGrow: 1,
-    flexBasis: '40%',
-    paddingHorizontal: spacing.sm,
-  },
-  emptyText: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  minutesGroupLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    fontWeight: '700',
-    marginTop: spacing.xs,
-  },
-  minutesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  minutesNumber: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    width: spacing.lg,
-  },
-  minutesName: {
-    ...typography.body,
-    color: colors.text,
-    flex: 1,
-  },
-  minutesNameBench: {
-    color: colors.textSecondary,
-  },
-  minutesNameUnavailable: {
-    color: colors.textDisabled,
-    textDecorationLine: 'line-through',
-  },
-  minutesValue: {
-    ...typography.body,
-    fontWeight: '600',
-    color: colors.accent,
-  },
-  minutesTarget: {
-    ...typography.caption,
-    fontWeight: '400',
-    color: colors.textDisabled,
-  },
-  rotationUnder: {
-    ...typography.caption,
-    fontWeight: '600',
-    color: colors.accent,
-  },
-  rotationOver: {
-    ...typography.caption,
-    fontWeight: '600',
-    color: colors.alert,
-  },
-  rotationHint: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  nextSubHint: {
-    ...typography.caption,
-    fontWeight: '700',
-    color: colors.accent,
-  },
-  clockBlock: {
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-  },
-  clockMinute: {
-    ...typography.title,
-    fontWeight: '800',
-    color: colors.text,
-  },
-  clockPeriod: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  planTarget: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  planBreak: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  planMinute: {
-    ...typography.body,
-    fontWeight: '700',
-    color: colors.accent,
-    width: spacing.xl,
-  },
-  planSwaps: {
-    flex: 1,
-    gap: spacing.xs / 2,
-  },
-  planSwap: {
-    ...typography.body,
-    color: colors.text,
-  },
-  planOn: {
-    color: colors.accent,
-  },
-  planOff: {
-    color: colors.textSecondary,
-  },
-  eventRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  minute: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    width: spacing.lg,
-  },
-  eventPlayer: {
-    ...typography.body,
-    color: colors.text,
-  },
-  eventDetail: {
-    ...typography.caption,
-    color: colors.textDisabled,
-  },
-  eventSpacer: {
-    flex: 1,
-  },
-  eventAction: {
-    minHeight: 32,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xs,
-  },
-  eventCancel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  eventRemove: {
-    ...typography.caption,
-    color: colors.danger,
-    fontWeight: '700',
-  },
-  eventError: {
-    ...typography.caption,
-    color: colors.danger,
-  },
-  cardIcon: {
-    width: 10,
-    height: 14,
-    borderRadius: 2,
-  },
-  lineupColumn: {
-    gap: spacing.xs,
-  },
-  lineupTitle: {
-    ...typography.caption,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  lineupPlayer: {
-    ...typography.body,
-    color: colors.text,
-  },
-});
