@@ -22,11 +22,12 @@ describe('rotationPlan', () => {
       onPitchCount: 6,
       duration: 60,
       elapsed: 0,
+      keeperId: 'gk',
     });
 
     expect(plan.target).toBe(40);
     expect(plan.subs.map((sub) => sub.minute)).toEqual([20, 20, 20, 40, 40, 40]);
-    expect(plan.nextSub).toEqual(plan.subs[0]);
+    expect(plan.nextBreak?.subs).toEqual(plan.subs.slice(0, 3));
     expect(plan.projected.every((entry) => entry.minutes === 40)).toBe(true);
   });
 
@@ -36,10 +37,11 @@ describe('rotationPlan', () => {
       onPitchCount: 7,
       duration: 50,
       elapsed: 0,
+      keeperId: 'gk',
     });
 
     expect(plan.subs).toEqual([]);
-    expect(plan.nextSub).toBeUndefined();
+    expect(plan.nextBreak).toBeUndefined();
     expect(plan.projected.every((entry) => entry.minutes === 50)).toBe(true);
   });
 
@@ -58,7 +60,13 @@ describe('rotationPlan', () => {
       { player: player('p8'), minutes: 10, isOnPitch: true },
     ];
 
-    const plan = rotationPlan({ minutes, onPitchCount: 6, duration: 60, elapsed: 30 });
+    const plan = rotationPlan({
+      minutes,
+      onPitchCount: 6,
+      duration: 60,
+      elapsed: 30,
+      keeperId: 'gk',
+    });
 
     expect(plan.subs.map((sub) => sub.minute)).toEqual([40, 40, 40]);
     expect(plan.projected.every((entry) => entry.minutes === 40)).toBe(true);
@@ -70,6 +78,7 @@ describe('rotationPlan', () => {
       onPitchCount: 7,
       duration: 50,
       elapsed: 0,
+      keeperId: 'gk',
     });
 
     expect(plan.target).toBe(35);
@@ -88,6 +97,7 @@ describe('rotationPlan', () => {
       onPitchCount: 7,
       duration: 50,
       elapsed: 12,
+      keeperId: 'gk',
     });
 
     const mins = plan.subs.map((sub) => sub.minute);
@@ -104,9 +114,94 @@ describe('rotationPlan', () => {
       { player: player('p2'), minutes: 30, isOnPitch: false },
     ];
 
-    const plan = rotationPlan({ minutes, onPitchCount: 2, duration: 40, elapsed: 0 });
+    const plan = rotationPlan({
+      minutes,
+      onPitchCount: 2,
+      duration: 40,
+      elapsed: 0,
+      keeperId: 'gk',
+    });
 
     expect(plan.subs).toEqual([]);
     expect(plan.projected.find((entry) => entry.player.id === 'p2')?.minutes).toBe(30);
+  });
+
+  describe('goalkeeper', () => {
+    /** 7-a-side: keeper p0 + 6 outfield on, `n - 7` on the bench, all on zero. */
+    function sevenASide(n: number): PlayerMinutes[] {
+      return squadMinutes(n, 7);
+    }
+
+    it('keeps a full-match keeper out of every swap and shares the outfield evenly', () => {
+      const plan = rotationPlan({
+        minutes: sevenASide(9),
+        onPitchCount: 6,
+        duration: 60,
+        elapsed: 0,
+        keeperId: 'p0',
+      });
+
+      expect(plan.swapsKeeper).toBe(false);
+      expect(plan.keeperChange).toBeUndefined();
+      expect(plan.subs.some((sub) => sub.on.id === 'p0' || sub.off.id === 'p0')).toBe(false);
+      // 6 slots × 60′ shared by the 8 outfielders.
+      expect(plan.target).toBe(45);
+      expect(plan.projected.map((entry) => entry.player.id)).not.toContain('p0');
+      expect(plan.projected.every((entry) => entry.minutes === 45)).toBe(true);
+    });
+
+    it('swaps the keeper at half time and evens everyone out, goal time included', () => {
+      const plan = rotationPlan({
+        minutes: sevenASide(9),
+        onPitchCount: 6,
+        duration: 60,
+        elapsed: 0,
+        keeperId: 'p0',
+        secondKeeperId: 'p8',
+      });
+
+      expect(plan.swapsKeeper).toBe(true);
+      expect(plan.keeperChange).toMatchObject({
+        minute: 30,
+        keeper: { id: 'p8' },
+        previous: { id: 'p0' },
+      });
+      // Never two keepers, and 7 on the pitch the whole time.
+      const total = plan.projected.reduce((sum, entry) => sum + entry.minutes, 0);
+      expect(total).toBe(7 * 60);
+      expect(plan.projected.find((e) => e.player.id === 'p0')?.inGoal).toBe(30);
+      expect(plan.projected.find((e) => e.player.id === 'p8')?.inGoal).toBe(30);
+      const played = plan.projected.map((entry) => entry.minutes);
+      expect(Math.max(...played) - Math.min(...played)).toBeLessThanOrEqual(15);
+    });
+
+    it('brings the second keeper on at half time when they start on the bench', () => {
+      const plan = rotationPlan({
+        minutes: sevenASide(8),
+        onPitchCount: 6,
+        duration: 50,
+        elapsed: 0,
+        keeperId: 'p0',
+        secondKeeperId: 'p7',
+      });
+
+      const halfTime = plan.breaks.find((b) => b.minute === 25);
+      expect(halfTime?.keeperChange?.keeper.id).toBe('p7');
+      // Before half time they still get an outfield turn like anyone else.
+      expect(plan.subs.some((sub) => sub.on.id === 'p7' && sub.minute < 25)).toBe(true);
+    });
+
+    it('ignores a second keeper who is not available', () => {
+      const plan = rotationPlan({
+        minutes: sevenASide(9),
+        onPitchCount: 6,
+        duration: 60,
+        elapsed: 0,
+        keeperId: 'p0',
+        secondKeeperId: 'missing',
+      });
+
+      expect(plan.swapsKeeper).toBe(false);
+    });
   });
 });

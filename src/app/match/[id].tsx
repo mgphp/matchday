@@ -21,6 +21,7 @@ import {
   runningPeriod,
   type ClockAction,
 } from '@/lib/match-clock';
+import { useSecondKeeper } from '@/lib/keeper-plan';
 import { useMatchFormat } from '@/lib/match-format';
 import { matchRotation } from '@/lib/match-rotation';
 import { useTeam } from '@/lib/team-context';
@@ -42,6 +43,7 @@ export default function MatchDetailScreen() {
   const { data: squad } = useData(getSquad);
   const ownTeam = useTeam();
   const { format } = useMatchFormat(ownTeam.id);
+  const { secondKeeperId, setSecondKeeperId } = useSecondKeeper(String(id));
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingLineup, setIsEditingLineup] = useState(false);
   const [isSubstituting, setIsSubstituting] = useState(false);
@@ -90,7 +92,16 @@ export default function MatchDetailScreen() {
   const minute = displayMinute(data, now);
   // No length of its own → the team's format default (Settings).
   const duration = data.durationMinutes ?? format.durationMinutes;
-  const rota = matchRotation({ match: data, squad, side: ownSide, minute, duration });
+  const rota = matchRotation({
+    match: data,
+    squad,
+    side: ownSide,
+    minute,
+    duration,
+    secondKeeperId,
+  });
+  // The keeper choice is fixed once the second half is under way.
+  const canChangeKeeper = rota.isPreMatch || (data.status === 'live' && minute < duration / 2);
   // Only offer a substitution once the match has actually started — before
   // kick-off "who is on the pitch" is just the starting lineup, edited via
   // the lineup editor instead.
@@ -125,13 +136,16 @@ export default function MatchDetailScreen() {
           <MinutesCard onPitch={rota.onPitch} bench={rota.bench} missing={rota.missing} />
         ) : null}
 
-        {rota.plan && (rota.isPreMatch || rota.plan.subs.length > 0) ? (
+        {rota.plan && (rota.isPreMatch || canChangeKeeper || rota.plan.breaks.length > 0) ? (
           <RotationPlanCard
             plan={rota.plan}
             isPreMatch={rota.isPreMatch}
             duration={duration}
             keeper={rota.keeper}
             lineup={rota.lineup}
+            keeperOptions={rota.keeperOptions}
+            secondKeeper={rota.secondKeeper}
+            onChangeSecondKeeper={canChangeKeeper ? setSecondKeeperId : undefined}
           />
         ) : rota.isPreMatch && !rota.lineup?.length ? (
           <RotationPlanPrompt />

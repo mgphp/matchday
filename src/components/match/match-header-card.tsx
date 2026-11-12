@@ -100,8 +100,7 @@ export function MatchHeaderCard({
   const homeScorers = scorersFor(match.events, 'home');
   const awayScorers = scorersFor(match.events, 'away');
   const periodLabel = periodLabelFor(match, clockAction);
-  const nextSub = plan?.nextSub;
-  const nextBreak = nextSub ? plan.subs.filter((sub) => sub.minute === nextSub.minute) : [];
+  const nextBreak = plan?.nextBreak;
 
   return (
     <Card>
@@ -172,11 +171,16 @@ export function MatchHeaderCard({
           {nextOn ? `Due on: ${nextOn.player.name}` : null}
         </Text>
       ) : null}
-      {nextSub ? (
+      {nextBreak ? (
         <Text style={styles.nextSubHint}>
-          {`Next sub ${nextSub.minute}′`}
-          {nextSub.minute > minute ? ` (in ${nextSub.minute - minute} min)` : ''}
-          {`: ${nextBreak.map((sub) => `${sub.on.squadNumber} for ${sub.off.squadNumber}`).join(', ')}`}
+          {`Next sub ${nextBreak.minute}′`}
+          {nextBreak.minute > minute ? ` (in ${nextBreak.minute - minute} min)` : ''}
+          {`: ${[
+            ...(nextBreak.keeperChange
+              ? [`${nextBreak.keeperChange.keeper.squadNumber} in goal`]
+              : []),
+            ...nextBreak.subs.map((sub) => `${sub.on.squadNumber} for ${sub.off.squadNumber}`),
+          ].join(', ')}`}
         </Text>
       ) : null}
     </Card>
