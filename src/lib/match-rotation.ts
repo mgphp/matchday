@@ -7,7 +7,7 @@ import type { MatchDetail, Player } from '@/lib/types';
 /**
  * Everything the match centre shows about game time for our side: minutes
  * played (split on pitch / bench / not available), who's due on/off, and the
- * forward sub plan. Pure — the screen passes in the ticking minute.
+ * forward sub plan (with an optional half-time keeper swap). Pure — the screen passes in the ticking minute.
  */
 export function matchRotation({
   match,
@@ -15,12 +15,15 @@ export function matchRotation({
   side,
   minute,
   duration,
+  secondKeeperId,
 }: {
   match: MatchDetail;
   squad?: Player[];
   side: 'home' | 'away';
   minute: number;
   duration: number;
+  /** Goes in goal at half time; omit when the keeper plays the full match. */
+  secondKeeperId?: string;
 }) {
   const lineup = match.lineups?.[side];
   // Minutes only mean something once the match is under way; before kick-off
@@ -43,8 +46,9 @@ export function matchRotation({
       })
     : undefined;
 
-  // Forward sub schedule for even outfield minutes. The keeper is held out of
-  // the maths (they can still be swapped by hand via the substitution modal).
+  // Forward sub schedule. The keeper either plays the whole match (and is held
+  // out of the maths) or hands over at half time, in which case both keepers
+  // join the outfield rotation for their other half.
   const keeper = lineup?.find((player) => player.position === 'GK') ?? lineup?.[0];
   const outfieldOnPitch = (lineup?.length ?? 0) - (keeper ? 1 : 0);
   // Before kick-off the same plan is worked out from the starting lineup with
@@ -56,19 +60,27 @@ export function matchRotation({
           isAvailable(match, entry.player.id),
         )
       : undefined;
-  const outfieldMinutes = (isPreMatch ? preMatchMinutes : availableMinutes)?.filter(
-    (entry) => entry.player.id !== keeper?.id,
-  );
+  const planMinutes = isPreMatch ? preMatchMinutes : availableMinutes;
+  // Who could take over in goal: anyone available bar the starting keeper,
+  // recognised keepers first.
+  const keeperOptions = (planMinutes ?? [])
+    .map((entry) => entry.player)
+    .filter((player) => player.id !== keeper?.id)
+    .sort((a, b) => Number(b.position === 'GK') - Number(a.position === 'GK'));
+  const secondKeeper = keeperOptions.find((player) => player.id === secondKeeperId);
   const plan =
     (match.status === 'live' || isPreMatch) &&
-    outfieldMinutes &&
-    outfieldMinutes.length > 0 &&
+    keeper &&
+    planMinutes &&
+    planMinutes.length > 1 &&
     outfieldOnPitch > 0
       ? rotationPlan({
-          minutes: outfieldMinutes,
+          minutes: planMinutes,
           onPitchCount: outfieldOnPitch,
           duration,
           elapsed: minute,
+          keeperId: keeper.id,
+          secondKeeperId: secondKeeper?.id,
         })
       : undefined;
 
@@ -82,6 +94,8 @@ export function matchRotation({
     nextOn: rotationEntries ? dueOn(rotationEntries) : undefined,
     nextOff: rotationEntries ? dueOff(rotationEntries) : undefined,
     keeper,
+    secondKeeper,
+    keeperOptions,
     plan,
   };
 }

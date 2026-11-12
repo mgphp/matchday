@@ -60,13 +60,16 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
   forward substitution schedule: the match is split into equal shifts so every
   available outfielder gets the same minutes, and the plan lists the minute
   each swap should happen at (who comes on for whom). It recomputes from the
-  live clock and the subs already recorded, so drift self-corrects. The
-  goalkeeper is held out of the maths but can still be swapped by hand
-  (`src/lib/rotation-plan.ts`)
+  live clock and the subs already recorded, so drift self-corrects. On the card
+  the coach picks **Goalkeeper: Full match** (keeper held out of the maths) or
+  **Swap at half time** plus the 2nd-half keeper. With a swap, both keepers
+  play outfield in their other half and everyone's total (goal time included)
+  is evened out. The choice is saved on the phone for each match
+  (`src/lib/rotation-plan.ts`, `src/lib/keeper-plan.ts`)
 - **Pre-match plan** — before kick-off, once a lineup is set, the same
   Rotation plan card lists every planned sub (minute, who comes on, who goes
-  off) and each player's planned minutes and whether they start. The
-  goalkeeper stays on for the whole match; set the match length in "Edit match"
+  off) and each player's planned minutes and whether they start (or which
+  half they're in goal); set the match length in "Edit match"
 - **Substitutions** — while a match is live, "Substitution" records who came
   off, who came on and at what minute (defaulting to the clock). The timeline
   and the on-pitch/bench split both follow from these events

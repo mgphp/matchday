@@ -673,8 +673,8 @@ kick-off, to know who comes on when.
 - [x] Reuses `rotationPlan` unchanged, fed the starting lineup with everyone on
       zero minutes. Unavailable players are left out.
 - [x] The goalkeeper (the starter whose main position is GK) is static: shown
-      for the full match and never in a swap. Rotating keepers is a separate
-      feature.
+      for the full match and never in a swap. Half-time keeper swap added in
+      M5.13.
 - [x] Uses `Match.durationMinutes` (default 90) and says so, pointing at Edit
       match. With no lineup the card prompts for one; with no bench it says
       everyone plays the full match.
@@ -840,6 +840,25 @@ side was theirs and whether they won.
 - [x] Team rows leave room for the crest (#58), left of the name.
 - [x] Tests: own-team highlight, H/A, W/D/L at home and away, no marks
       without a team; Matches screen tests match on labels.
+
+### M5.13 — Rotation plan: half-time keeper swap
+
+The plan always kept the keeper in goal for the whole match and treated any
+other keeper as an outfielder. Coaches swap keepers at half time.
+
+- [x] Rotation plan card: **Goalkeeper** chips (Full match / Swap at half
+      time) and a **2nd-half keeper** picker (recognised keepers first).
+      Editable before kick-off and in the first half; saved per match on the
+      phone (`useSecondKeeper`, `matchday:secondKeeper:<matchId>`).
+- [x] `rotationPlan` takes `keeperId` / `secondKeeperId`. Without a swap the
+      keeper is held out and the outfielders share the outfield minutes
+      evenly. With one, half time is always a break, the keeper change shows
+      on it, and both keepers play outfield in their other half, so everyone's
+      total (goal time included) is evened out.
+- [x] The plan returns `breaks` (subs plus keeper change per minute); the
+      header's "Next sub" hint includes "N in goal".
+- [x] Tests: planner (full match, swap, bench keeper, unavailable keeper),
+      storage hook, screen swap flow.
 
 ## Definition of done (every milestone)
 
