@@ -753,6 +753,22 @@ fixture with no way out. Remove fixture was also easy to miss.
       flows are unchanged and still pass.
 - **Not verified on device here** — the web preview needs a real sign-in.
 
+### M5.8 — One confirm pattern for destructive actions ([#77](https://github.com/mgphp/matchday/issues/77))
+
+Remove player used "Tap again to confirm removal" on the same button; Remove
+fixture used a warning panel with Cancel / Delete.
+
+- [x] `ConfirmDestructive` (`src/components/confirm-destructive.tsx`) — a
+      labelled Danger zone (red rule, heading, one-line description) whose
+      trigger expands into a warning plus Cancel / confirm. A failed confirm
+      collapses the panel and hands the error to `onError`.
+- [x] Edit match and Edit player both use it. Player removal keeps its Undo
+      banner (it can be reversed); fixture removal can't, so it has none.
+- [x] Timeline event rows keep their compact inline Cancel / Remove confirm —
+      a full panel per row would swamp the list.
+- [x] Convention recorded in CONTRIBUTING. Tests: the component (trigger,
+      confirm, cancel, failure, disabled) and updated player-removal flows.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)

@@ -101,7 +101,7 @@ describe('SquadScreen', () => {
     expect(mockGetSquad).toHaveBeenCalledTimes(2);
   });
 
-  it('removes a player after a second confirming tap', async () => {
+  it('removes a player after confirming', async () => {
     mockRemovePlayer.mockResolvedValue(undefined);
     const { findByLabelText, getByText } = await render(<SquadScreen />);
 
@@ -109,7 +109,7 @@ describe('SquadScreen', () => {
     await userEvent.press(getByText('Remove player'));
     expect(mockRemovePlayer).not.toHaveBeenCalled();
 
-    await userEvent.press(getByText('Tap again to confirm removal'));
+    await userEvent.press(getByText('Remove'));
 
     expect(mockRemovePlayer).toHaveBeenCalledWith('p1');
     expect(mockGetSquad).toHaveBeenCalledTimes(2);
@@ -124,7 +124,7 @@ describe('SquadScreen', () => {
 
     await userEvent.press(await findByLabelText('Number 1, Test Keeper, Goalkeeper'));
     await userEvent.press(getByText('Remove player'));
-    await userEvent.press(getByText('Tap again to confirm removal'));
+    await userEvent.press(getByText('Remove'));
 
     expect(await findByText('Removed Test Keeper')).toBeTruthy();
 

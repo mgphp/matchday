@@ -35,5 +35,9 @@ npm test
 - TypeScript strict; no `any` unless justified.
 - Import design tokens from `@/theme/theme` — never hard-code colors or spacing.
 - Routes live in `src/app` (expo-router); shared UI in `src/components`.
+- Destructive actions in a modal use `ConfirmDestructive` (a Danger zone with
+  a Cancel / confirm panel). If the action can be undone, also show an
+  `UndoBanner` afterwards. Compact list rows (e.g. timeline events) keep an
+  inline Cancel / Remove confirm.
 - New environment variables go in `.env.example` and the docs.
 - New scripts and behavior changes must be reflected in README/docs.

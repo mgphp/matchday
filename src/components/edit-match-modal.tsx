@@ -12,6 +12,7 @@ import {
 
 import { Button } from '@/components/button';
 import { ChoiceChips } from '@/components/choice-chips';
+import { ConfirmDestructive } from '@/components/confirm-destructive';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { TextField } from '@/components/text-field';
@@ -74,8 +75,6 @@ export function EditMatchModal({
   );
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [confirmingRemove, setConfirmingRemove] = useState(false);
-  const [isRemoving, setIsRemoving] = useState(false);
 
   const parsedHome = Number(homeScore);
   const parsedAway = Number(awayScore);
@@ -96,20 +95,12 @@ export function EditMatchModal({
 
   const handleClose = () => {
     setError(undefined);
-    setConfirmingRemove(false);
     onClose();
   };
 
   const handleRemove = async () => {
     setError(undefined);
-    setIsRemoving(true);
-    try {
-      await onRemove();
-    } catch (removeError) {
-      setError(removeErrorMessage(removeError));
-      setIsRemoving(false);
-      setConfirmingRemove(false);
-    }
+    await onRemove();
   };
 
   const handleSubmit = async () => {
@@ -209,42 +200,15 @@ export function EditMatchModal({
               disabled={isSubmitting || !isComplete}
             />
 
-            <View style={styles.removeSection} accessibilityLabel="Danger zone">
-              <Text style={styles.removeHeading}>Danger zone</Text>
-              <Text style={styles.hint}>
-                Removes this fixture, its lineup and every recorded event.
-              </Text>
-              {confirmingRemove ? (
-                <>
-                  <Text style={styles.removeWarning}>
-                    Delete this fixture and its events? This can&#8217;t be undone.
-                  </Text>
-                  <View style={styles.removeActions}>
-                    <View style={styles.removeAction}>
-                      <Button
-                        label="Cancel"
-                        variant="secondary"
-                        onPress={() => setConfirmingRemove(false)}
-                        disabled={isRemoving}
-                      />
-                    </View>
-                    <View style={styles.removeAction}>
-                      <Button
-                        label={isRemoving ? 'Removing…' : 'Delete fixture'}
-                        onPress={handleRemove}
-                        disabled={isRemoving}
-                      />
-                    </View>
-                  </View>
-                </>
-              ) : (
-                <Button
-                  label="Remove fixture"
-                  variant="secondary"
-                  onPress={() => setConfirmingRemove(true)}
-                />
-              )}
-            </View>
+            <ConfirmDestructive
+              description="Removes this fixture, its lineup and every recorded event."
+              triggerLabel="Remove fixture"
+              warning="Delete this fixture and its events? This can’t be undone."
+              confirmLabel="Delete fixture"
+              busyLabel="Removing…"
+              onConfirm={handleRemove}
+              onError={(removeError) => setError(removeErrorMessage(removeError))}
+            />
           </ScrollView>
         </KeyboardAvoidingView>
       </Screen>
@@ -287,29 +251,5 @@ const styles = StyleSheet.create({
   error: {
     ...typography.caption,
     color: colors.danger,
-  },
-  removeSection: {
-    marginTop: spacing.xl,
-    paddingTop: spacing.md,
-    gap: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.danger,
-  },
-  removeHeading: {
-    ...typography.caption,
-    fontWeight: '700',
-    color: colors.danger,
-    textTransform: 'uppercase',
-  },
-  removeWarning: {
-    ...typography.caption,
-    color: colors.danger,
-  },
-  removeActions: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  removeAction: {
-    flex: 1,
   },
 });
