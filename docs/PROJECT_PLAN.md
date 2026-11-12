@@ -737,6 +737,22 @@ were ragged and could squash on a 375px phone.
       last button fills its row.
 - **Not verified on device here** — the web preview needs a real sign-in.
 
+### M5.7 — Edit match: keyboard and remove ([#75](https://github.com/mgphp/matchday/issues/75))
+
+The modal was a plain `View` and the score / full-time fields use the iOS
+number pad, which has no Done key — once open it could cover Save and Remove
+fixture with no way out. Remove fixture was also easy to miss.
+
+- [x] Content sits in a `ScrollView` (`keyboardShouldPersistTaps="handled"`,
+      `keyboardDismissMode="on-drag"`) inside a `KeyboardAvoidingView`, so a
+      tap outside a field or a scroll dismisses the pad and Save stays
+      reachable.
+- [x] Remove fixture moved into a labelled **Danger zone** (red rule, heading,
+      one-line explanation) below Save. Same two-step confirm.
+- [x] Tests: scroll/keyboard props and the danger zone; the remove confirm
+      flows are unchanged and still pass.
+- **Not verified on device here** — the web preview needs a real sign-in.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)
