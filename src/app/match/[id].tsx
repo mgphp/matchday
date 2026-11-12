@@ -605,22 +605,18 @@ export default function MatchDetailScreen() {
         </Card>
 
         <Card>
-          <SectionHeader title="Lineups" variant="accent" />
-          {data.lineups ? (
-            <View style={styles.lineupsRow}>
-              <LineupColumn
-                title={data.home.shortName}
-                players={data.lineups.home}
-                formation={ownSide === 'home' ? data.formation : undefined}
-              />
-              <LineupColumn
-                title={data.away.shortName}
-                players={data.lineups.away}
-                formation={ownSide === 'away' ? data.formation : undefined}
-              />
-            </View>
+          <SectionHeader title="Lineup" variant="accent" />
+          {ourLineup && ourLineup.length > 0 ? (
+            // Only our side: the app never records the opponent's lineup.
+            <LineupColumn
+              title={data[ownSide].shortName}
+              players={ourLineup}
+              formation={data.formation}
+            />
           ) : (
-            <Text style={styles.emptyText}>Teams not announced yet.</Text>
+            <Text style={styles.emptyText}>
+              No lineup set yet — use Edit lineup to pick your team.
+            </Text>
           )}
         </Card>
       </ScrollView>
@@ -860,12 +856,7 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 2,
   },
-  lineupsRow: {
-    flexDirection: 'row',
-    gap: spacing.lg,
-  },
   lineupColumn: {
-    flex: 1,
     gap: spacing.xs,
   },
   lineupTitle: {
