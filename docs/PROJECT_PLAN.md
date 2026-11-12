@@ -726,6 +726,17 @@ opponent's lineup, so one column was always empty.
       lineup set it points at Edit lineup.
 - [x] Tests: opponent column gone, empty-lineup prompt.
 
+### M5.6 — Match centre actions on narrow phones ([#74](https://github.com/mgphp/matchday/issues/74))
+
+A live match carries up to four actions (Edit match, Edit lineup, Goal / card,
+Substitution). The row wrapped, but buttons sized to their labels, so rows
+were ragged and could squash on a 375px phone.
+
+- [x] Actions form a two-column grid: each button grows to an equal share
+      (`flexBasis: '40%'`, `flexGrow: 1`) with tighter side padding; an odd
+      last button fills its row.
+- **Not verified on device here** — the web preview needs a real sign-in.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)

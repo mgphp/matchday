@@ -427,16 +427,23 @@ export default function MatchDetailScreen() {
             />
           ) : null}
           <View style={styles.actionsRow}>
-            <Button label="Edit match" variant="secondary" onPress={() => setIsEditing(true)} />
+            <Button
+              label="Edit match"
+              variant="secondary"
+              style={styles.action}
+              onPress={() => setIsEditing(true)}
+            />
             <Button
               label="Edit lineup"
               variant="secondary"
+              style={styles.action}
               onPress={() => setIsEditingLineup(true)}
             />
             {canRecordEvent ? (
               <Button
                 label="Goal / card"
                 variant="secondary"
+                style={styles.action}
                 onPress={() => setIsRecordingEvent(true)}
               />
             ) : null}
@@ -444,6 +451,7 @@ export default function MatchDetailScreen() {
               <Button
                 label="Substitution"
                 variant="secondary"
+                style={styles.action}
                 onPress={() => setIsSubstituting(true)}
               />
             ) : null}
@@ -705,6 +713,13 @@ const styles = StyleSheet.create({
     // Up to four actions on a live match — wrap rather than squash them.
     flexWrap: 'wrap',
     gap: spacing.sm,
+  },
+  action: {
+    // Two per row on a phone: equal widths, never squashed below a readable
+    // label. A lone last button stretches to fill its row.
+    flexGrow: 1,
+    flexBasis: '40%',
+    paddingHorizontal: spacing.sm,
   },
   emptyText: {
     ...typography.body,
