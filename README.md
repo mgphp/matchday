@@ -22,8 +22,8 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
   `@react-native-async-storage/async-storage`
 - **Match centre** (`/match/[id]`) — score header, events timeline (goals,
   cards, substitutions) and our own lineup (the opponent's isn't recorded); "Edit match"
-  updates status and score, and can **remove the fixture** (a two-step
-  in-modal confirm — deletes the match and its events); "Edit lineup" picks
+  updates status and score, and can **remove the fixture** (in its Danger zone, a
+  two-step confirm — deletes the match and its events); "Edit lineup" picks
   the starting XI from the squad and sets a formation (e.g. "2-3-1"). The
   fixtures list refreshes on return, so a deleted match drops off it. A
   failed removal says why (signed out, offline, server error, or a

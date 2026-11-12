@@ -16,6 +16,26 @@ const scheduledMatch: Match = {
 };
 
 describe('EditMatchModal', () => {
+  it('scrolls and lets taps outside a field dismiss the number pad', async () => {
+    const { getByTestId, getByText, getByLabelText } = await render(
+      <EditMatchModal
+        visible
+        onClose={jest.fn()}
+        match={scheduledMatch}
+        onSubmit={jest.fn()}
+        onRemove={jest.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    const scroll = getByTestId('edit-match-scroll');
+    expect(scroll.props.keyboardShouldPersistTaps).toBe('handled');
+    expect(scroll.props.keyboardDismissMode).toBe('on-drag');
+    // Remove fixture sits in its own labelled danger zone, below Save.
+    expect(getByLabelText('Danger zone')).toBeTruthy();
+    expect(getByText('Danger zone')).toBeTruthy();
+    expect(getByText('Remove fixture')).toBeTruthy();
+  });
+
   it('has no score fields and submits for a scheduled match', async () => {
     const onSubmit = jest.fn().mockResolvedValue(undefined);
     const { queryByLabelText, getByText } = await render(

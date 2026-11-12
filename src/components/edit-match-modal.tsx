@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { Button } from '@/components/button';
 import { ChoiceChips } from '@/components/choice-chips';
@@ -128,100 +137,133 @@ export function EditMatchModal({
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      <Screen>
-        <View style={styles.header}>
-          <SectionHeader title="Edit match" variant="accent" />
-          <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={handleClose}>
-            <Text style={styles.close}>Close</Text>
-          </Pressable>
-        </View>
-        <ChoiceChips
-          label="Status"
-          options={STATUSES}
-          optionLabels={STATUS_LABELS}
-          value={status}
-          onChange={setStatus}
-        />
-        {hasScore(status) ? (
-          <View style={styles.scoreRow}>
-            <View style={styles.scoreField}>
-              <TextField
-                label={match.home.shortName}
-                value={homeScore}
-                onChangeText={setHomeScore}
-                keyboardType="number-pad"
-              />
+      <Screen style={styles.screen}>
+        {/* The iOS number pad has no Done key: scrolling (or tapping outside a
+            field) dismisses it, and the view lifts so Save stays reachable. */}
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <ScrollView
+            testID="edit-match-scroll"
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
+            <View style={styles.header}>
+              <SectionHeader title="Edit match" variant="accent" />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+                onPress={handleClose}
+              >
+                <Text style={styles.close}>Close</Text>
+              </Pressable>
             </View>
-            <View style={styles.scoreField}>
-              <TextField
-                label={match.away.shortName}
-                value={awayScore}
-                onChangeText={setAwayScore}
-                keyboardType="number-pad"
-              />
-            </View>
-          </View>
-        ) : null}
-        <TextField
-          label="Full-time minutes"
-          value={duration}
-          onChangeText={setDuration}
-          keyboardType="number-pad"
-        />
-        <Text style={styles.hint}>
-          Used to work out each player&#8217;s fair share of game time.
-        </Text>
-        {status === 'live' ? (
-          <Text style={styles.hint}>
-            The match minute comes from the clock — use Kick off / Half time / Full time on the
-            match screen.
-          </Text>
-        ) : null}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Button
-          label={isSubmitting ? 'Saving…' : 'Save'}
-          onPress={handleSubmit}
-          disabled={isSubmitting || !isComplete}
-        />
-
-        <View style={styles.removeSection}>
-          {confirmingRemove ? (
-            <>
-              <Text style={styles.removeWarning}>
-                Delete this fixture and its events? This can&#8217;t be undone.
-              </Text>
-              <View style={styles.removeActions}>
-                <View style={styles.removeAction}>
-                  <Button
-                    label="Cancel"
-                    variant="secondary"
-                    onPress={() => setConfirmingRemove(false)}
-                    disabled={isRemoving}
+            <ChoiceChips
+              label="Status"
+              options={STATUSES}
+              optionLabels={STATUS_LABELS}
+              value={status}
+              onChange={setStatus}
+            />
+            {hasScore(status) ? (
+              <View style={styles.scoreRow}>
+                <View style={styles.scoreField}>
+                  <TextField
+                    label={match.home.shortName}
+                    value={homeScore}
+                    onChangeText={setHomeScore}
+                    keyboardType="number-pad"
                   />
                 </View>
-                <View style={styles.removeAction}>
-                  <Button
-                    label={isRemoving ? 'Removing…' : 'Delete fixture'}
-                    onPress={handleRemove}
-                    disabled={isRemoving}
+                <View style={styles.scoreField}>
+                  <TextField
+                    label={match.away.shortName}
+                    value={awayScore}
+                    onChangeText={setAwayScore}
+                    keyboardType="number-pad"
                   />
                 </View>
               </View>
-            </>
-          ) : (
-            <Button
-              label="Remove fixture"
-              variant="secondary"
-              onPress={() => setConfirmingRemove(true)}
+            ) : null}
+            <TextField
+              label="Full-time minutes"
+              value={duration}
+              onChangeText={setDuration}
+              keyboardType="number-pad"
             />
-          )}
-        </View>
+            <Text style={styles.hint}>
+              Used to work out each player&#8217;s fair share of game time.
+            </Text>
+            {status === 'live' ? (
+              <Text style={styles.hint}>
+                The match minute comes from the clock — use Kick off / Half time / Full time on the
+                match screen.
+              </Text>
+            ) : null}
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+            <Button
+              label={isSubmitting ? 'Saving…' : 'Save'}
+              onPress={handleSubmit}
+              disabled={isSubmitting || !isComplete}
+            />
+
+            <View style={styles.removeSection} accessibilityLabel="Danger zone">
+              <Text style={styles.removeHeading}>Danger zone</Text>
+              <Text style={styles.hint}>
+                Removes this fixture, its lineup and every recorded event.
+              </Text>
+              {confirmingRemove ? (
+                <>
+                  <Text style={styles.removeWarning}>
+                    Delete this fixture and its events? This can&#8217;t be undone.
+                  </Text>
+                  <View style={styles.removeActions}>
+                    <View style={styles.removeAction}>
+                      <Button
+                        label="Cancel"
+                        variant="secondary"
+                        onPress={() => setConfirmingRemove(false)}
+                        disabled={isRemoving}
+                      />
+                    </View>
+                    <View style={styles.removeAction}>
+                      <Button
+                        label={isRemoving ? 'Removing…' : 'Delete fixture'}
+                        onPress={handleRemove}
+                        disabled={isRemoving}
+                      />
+                    </View>
+                  </View>
+                </>
+              ) : (
+                <Button
+                  label="Remove fixture"
+                  variant="secondary"
+                  onPress={() => setConfirmingRemove(true)}
+                />
+              )}
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Screen>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    // The ScrollView owns the padding so content can scroll edge to edge.
+    padding: 0,
+  },
+  flex: {
+    flex: 1,
+  },
+  content: {
+    padding: spacing.md,
+    gap: spacing.md,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -248,7 +290,16 @@ const styles = StyleSheet.create({
   },
   removeSection: {
     marginTop: spacing.xl,
+    paddingTop: spacing.md,
     gap: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.danger,
+  },
+  removeHeading: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.danger,
+    textTransform: 'uppercase',
   },
   removeWarning: {
     ...typography.caption,
