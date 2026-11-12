@@ -57,19 +57,21 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
   "Edit match" — a match without one uses the team's match format from
   Settings
 - **Rotation plan** — once a match kicks off, a prominent timer and a
-  forward substitution schedule: the match is split into equal shifts so every
-  available outfielder gets the same minutes, and the plan lists the minute
-  each swap should happen at (who comes on for whom). It recomputes from the
-  live clock and the subs already recorded, so drift self-corrects. On the card
+  forward substitution schedule. Every available player gets the same minutes
+  (to the nearest minute) and the sub times follow from that, so uneven
+  counts just mean more, smaller subs (e.g. 7 outfielders for 6 places → a sub
+  every ~9′). The card lists **Sub times** (minute, who comes on for whom) and
+  the header shows the next one ("Sub now" if one is overdue). It recomputes
+  from the live clock and the subs already recorded, so drift self-corrects. On the card
   the coach picks **Goalkeeper: Full match** (keeper held out of the maths) or
   **Swap at half time** plus the 2nd-half keeper. With a swap, both keepers
   play outfield in their other half and everyone's total (goal time included)
   is evened out. The choice is saved on the phone for each match
   (`src/lib/rotation-plan.ts`, `src/lib/keeper-plan.ts`)
 - **Pre-match plan** — before kick-off, once a lineup is set, the same
-  Rotation plan card lists every planned sub (minute, who comes on, who goes
-  off) and each player's planned minutes and whether they start (or which
-  half they're in goal); set the match length in "Edit match"
+  Rotation plan card lists every planned sub and, under **Who plays when**,
+  each player's on/off minutes (e.g. `0–43′, 51–60′`, `GK 0–30′`) and total;
+  set the match length in "Edit match"
 - **Substitutions** — while a match is live, "Substitution" records who came
   off, who came on and at what minute (defaulting to the clock). The timeline
   and the on-pitch/bench split both follow from these events

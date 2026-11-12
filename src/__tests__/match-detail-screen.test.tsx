@@ -267,16 +267,19 @@ describe('MatchDetailScreen', () => {
       availablePlayerIds: undefined,
     });
 
-    const { findByText, getByText, getByLabelText } = await renderScreen();
+    const { findByText, getByText, getByLabelText, getAllByLabelText } = await renderScreen();
     await findByText('Rotation plan');
 
     // Prominent match timer.
     expect(getByLabelText(/Match clock, 62 minutes/)).toBeTruthy();
-    // Even outfield share: 100 * 4 / 6 ≈ 67, keeper held out.
+    // Keeper held out of the outfield share.
     expect(getByText(/goalkeeper plays the full match/)).toBeTruthy();
-    expect(getByText(/Next sub 67/)).toBeTruthy();
-    // A planned break names a bench player coming on for someone on the pitch.
-    expect(getByLabelText(/At 67 minutes: .+ on for .+/)).toBeTruthy();
+    // The header names the next sub (or "Sub now" if one is overdue)…
+    expect(getByText(/Next sub \d+′ \(in \d+ min\)|Sub now/)).toBeTruthy();
+    // …and each planned break, timed to the minute, names who comes on for whom.
+    expect(getAllByLabelText(/At (6[2-9]|[7-9]\d) minutes: .+ on for .+/).length).toBeGreaterThan(
+      0,
+    );
 
     await mockRepository.updateMatchScore('m1', { status: 'live', durationMinutes: undefined });
   });
@@ -300,7 +303,7 @@ describe('MatchDetailScreen', () => {
       const { findByText, queryByText } = await renderScreen();
 
       expect(await findByText(/Set your lineup to see when to make each sub/)).toBeTruthy();
-      expect(queryByText('Planned minutes')).toBeNull();
+      expect(queryByText('Who plays when')).toBeNull();
     });
 
     it('plans every sub and each player’s minutes from the starting lineup', async () => {
@@ -310,10 +313,10 @@ describe('MatchDetailScreen', () => {
       await mockRepository.updateMatchScore('m2', { status: 'scheduled', durationMinutes: 60 });
 
       const { findByText, getByText, getByLabelText, queryByText } = await renderScreen();
-      await findByText('Planned minutes');
+      await findByText('Who plays when');
 
       // 60' × 4 outfield slots ÷ 6 outfielders = 40' each.
-      expect(getByText(/Even outfield share ≈ 40/)).toBeTruthy();
+      expect(getByText(/Equal outfield share ≈ 40/)).toBeTruthy();
       expect(getByText(/Planned for a 60/)).toBeTruthy();
       // Two on the bench out of six → three equal spells, breaks at 20' and 40'.
       expect(getByLabelText(/At 20 minutes: .+ on for .+, .+ on for .+/)).toBeTruthy();
@@ -324,10 +327,16 @@ describe('MatchDetailScreen', () => {
       expect(queryByText(new RegExp(`↓ ${squad[0].squadNumber} ${squad[0].name}`))).toBeNull();
       // Every outfielder — starter or bench — lands on the even share.
       for (const starter of squad.slice(1, 5)) {
-        expect(getByLabelText(`${starter.name}, starts, planned 40 minutes`)).toBeTruthy();
+        expect(
+          getByLabelText(new RegExp(`^${starter.name}, starts, on .+, planned 40 minutes`)),
+        ).toBeTruthy();
       }
       for (const sub of squad.slice(5)) {
-        expect(getByLabelText(`${sub.name}, starts on the bench, planned 40 minutes`)).toBeTruthy();
+        expect(
+          getByLabelText(
+            new RegExp(`^${sub.name}, starts on the bench, on [1-9].+, planned 40 minutes`),
+          ),
+        ).toBeTruthy();
       }
 
       // Still no "minutes played" before the match starts.
@@ -342,7 +351,7 @@ describe('MatchDetailScreen', () => {
       const second = squad[6];
 
       const { findByText, getByLabelText, getByText } = await renderScreen();
-      await findByText('Planned minutes');
+      await findByText('Who plays when');
       await userEvent.press(getByLabelText('Swap at half time'));
       await userEvent.press(getByLabelText(second.name));
 
@@ -351,9 +360,9 @@ describe('MatchDetailScreen', () => {
         getByLabelText(new RegExp(`^At 30 minutes: ${second.name} goes in goal`)),
       ).toBeTruthy();
       expect(
-        getByLabelText(new RegExp(`^${squad[0].name}, starts, GK 1st half, planned`)),
+        getByLabelText(new RegExp(`^${squad[0].name}, starts, on GK 0–30′.*, planned`)),
       ).toBeTruthy();
-      expect(getByLabelText(new RegExp(`^${second.name}, .*GK 2nd half, planned`))).toBeTruthy();
+      expect(getByLabelText(new RegExp(`^${second.name}, .*GK 30–60′, planned`))).toBeTruthy();
       expect(await AsyncStorage.getItem('matchday:secondKeeper:m2')).toBe(second.id);
     });
 
@@ -366,7 +375,7 @@ describe('MatchDetailScreen', () => {
       });
 
       const { findByText, queryByLabelText } = await renderScreen();
-      await findByText('Planned minutes');
+      await findByText('Who plays when');
 
       expect(queryByLabelText(new RegExp(`^${squad[6].name},`))).toBeNull();
     });

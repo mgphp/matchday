@@ -105,9 +105,8 @@ describe('rotationPlan', () => {
     expect(plan.subs.every((sub) => sub.minute > 12 && sub.minute < 50)).toBe(true);
   });
 
-  it('skips a swap that would not move anyone toward their share', () => {
-    // The only bench player has already had far more time than either starter,
-    // so bringing them back on helps nobody.
+  it('counts minutes already played, so everyone finishes level', () => {
+    // The bench player has already had 30', so they only need a short spell.
     const minutes: PlayerMinutes[] = [
       { player: player('p0'), minutes: 0, isOnPitch: true },
       { player: player('p1'), minutes: 0, isOnPitch: true },
@@ -122,8 +121,41 @@ describe('rotationPlan', () => {
       keeperId: 'gk',
     });
 
-    expect(plan.subs).toEqual([]);
-    expect(plan.projected.find((entry) => entry.player.id === 'p2')?.minutes).toBe(30);
+    const played = plan.projected.map((entry) => entry.minutes);
+    expect(Math.max(...played) - Math.min(...played)).toBeLessThanOrEqual(1);
+  });
+
+  it('times subs to the minute so uneven counts still split exactly', () => {
+    // 7 outfielders for 6 places over 60' → 51.4' each: one sub every ~8.6'.
+    const plan = rotationPlan({
+      minutes: squadMinutes(7, 6),
+      onPitchCount: 6,
+      duration: 60,
+      elapsed: 0,
+      keeperId: 'gk',
+    });
+
+    expect(plan.breaks.map((b) => b.minute)).toEqual([9, 17, 26, 34, 43, 51]);
+    expect(plan.breaks.every((b) => b.subs.length === 1)).toBe(true);
+    const played = plan.projected.map((entry) => entry.minutes);
+    expect(Math.max(...played) - Math.min(...played)).toBeLessThanOrEqual(1);
+  });
+
+  it('lists each player’s spells on the pitch', () => {
+    const plan = rotationPlan({
+      minutes: squadMinutes(8, 6),
+      onPitchCount: 6,
+      duration: 60,
+      elapsed: 0,
+      keeperId: 'gk',
+    });
+
+    for (const { stints, minutes } of plan.projected) {
+      expect(stints.reduce((sum, s) => sum + s.to - s.from, 0)).toBe(minutes);
+      expect(minutes).toBe(45);
+    }
+    // Bench players come on part-way; nobody's spells overlap.
+    expect(plan.projected.find((e) => e.player.id === 'p6')?.stints[0].from).toBeGreaterThan(0);
   });
 
   describe('goalkeeper', () => {
@@ -172,7 +204,7 @@ describe('rotationPlan', () => {
       expect(plan.projected.find((e) => e.player.id === 'p0')?.inGoal).toBe(30);
       expect(plan.projected.find((e) => e.player.id === 'p8')?.inGoal).toBe(30);
       const played = plan.projected.map((entry) => entry.minutes);
-      expect(Math.max(...played) - Math.min(...played)).toBeLessThanOrEqual(15);
+      expect(Math.max(...played) - Math.min(...played)).toBeLessThanOrEqual(1);
     });
 
     it('brings the second keeper on at half time when they start on the bench', () => {
