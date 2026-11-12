@@ -35,6 +35,9 @@ npm test
 - TypeScript strict; no `any` unless justified.
 - Import design tokens from `@/theme/theme` — never hard-code colors or spacing.
 - Routes live in `src/app` (expo-router); shared UI in `src/components`.
+  Pieces of one screen or modal go in a folder named after it
+  (`src/components/match/`, `src/components/lineup/`), and pure logic in
+  `src/lib`. Keep files under ~300 lines.
 - Destructive actions in a modal use `ConfirmDestructive` (a Danger zone with
   a Cancel / confirm panel). If the action can be undone, also show an
   `UndoBanner` afterwards. Compact list rows (e.g. timeline events) keep an

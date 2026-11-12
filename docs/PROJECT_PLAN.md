@@ -809,6 +809,23 @@ required, so every fixture meant six fields.
 - [x] Tests: short-name rules, minimal fixture, override, competition
       remembered/prefilled, More times.
 
+### M5.11 — Split the match centre and lineup modal ([#79](https://github.com/mgphp/matchday/issues/79))
+
+`src/app/match/[id].tsx` (886 lines) and `edit-lineup-modal.tsx` (807) had
+every card and helper inline. No behaviour change.
+
+- [x] `src/components/match/` — `MatchHeaderCard` (status, score, scorers,
+      clock, actions, rotation hints), `MinutesCard`, `RotationPlanCard` /
+      `RotationPlanPrompt`, `EventsCard`, `LineupCard`, shared
+      `match-styles.ts`.
+- [x] `src/lib/match-rotation.ts` — the screen's minutes / due on-off / sub
+      plan derivation as one pure function.
+- [x] `src/components/lineup/` — `Pitch` + `PitchMarkings`, `SlotPicker`,
+      `AvailabilityList`, `LineupShapeSelects`; `src/lib/formations.ts` holds
+      formation options and slot placement.
+- [x] Screen 204 lines, modal 273; nothing over 300. Existing screen/modal
+      tests unchanged; new `formations` tests.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)

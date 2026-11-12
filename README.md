@@ -160,9 +160,11 @@ matchday
 │   ├── app            # expo-router routes (file-based routing)
 │   │   ├── _layout.tsx  # root stack — wraps everything in AuthProvider + AuthGate
 │   │   ├── (tabs)       # tab navigation: Matches / Squad / Settings (Table screen hidden for now)
-│   │   └── match/[id].tsx # match centre (events, lineups, live polling)
+│   │   └── match/[id].tsx # match centre (data, polling, clock, modals)
 │   ├── components
 │   │   ├── auth       # AuthGate + login/register/onboarding screens (coach auth flow)
+│   │   ├── match      # match-centre cards: header/clock, minutes, rotation plan, events, lineup
+│   │   ├── lineup     # Edit lineup pieces: pitch + markings, slot picker, availability list, size/formation selects
 │   │   ├── add-player-modal.tsx # squad write path — name/positions/number form
 │   │   ├── Screen, Card, Button, Badge, MatchCard, SkeletonCard, TextField, StateView
 │   │   └── __tests__
@@ -172,6 +174,8 @@ matchday
 │   │   ├── coach-api.ts # club/coach/team management endpoints (registration, onboarding)
 │   │   ├── types.ts   # domain models (Match, Standing, Player)
 │   │   ├── use-data.ts # async data hook (loading/error/success)
+│   │   ├── formations.ts # formation options + placing players into pitch slots
+│   │   ├── match-rotation.ts # match-centre minutes, due on/off and sub plan for our side
 │   │   ├── fixture-defaults.ts # derived opponent short name + last competition, via AsyncStorage
 │   │   ├── match-format.ts # team size + default match length, per team, via AsyncStorage
 │   │   └── favourite-team.ts # favourite team, persisted via AsyncStorage
