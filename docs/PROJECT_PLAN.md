@@ -826,6 +826,21 @@ every card and helper inline. No behaviour change.
 - [x] Screen 204 lines, modal 273; nothing over 300. Existing screen/modal
       tests unchanged; new `formations` tests.
 
+### M5.12 — Match cards: own team, home/away, result ([#72](https://github.com/mgphp/matchday/issues/72))
+
+Cards read `Home 2 – 1 Away` in plain text, so a coach had to work out which
+side was theirs and whether they won.
+
+- [x] `MatchCard` takes `ownTeamId` (Matches passes the active team): home and
+      away on their own rows with the score at the right, our name in the
+      accent colour and bold, an **H** / **A** badge, and a **W** / **D** /
+      **L** badge on finished matches (`resultFor`, from our side).
+- [x] `Badge` gains `neutral` and `danger` variants (D and L).
+- [x] Accessibility label adds "home game" / "away game" and won/drew/lost.
+- [x] Team rows leave room for the crest (#58), left of the name.
+- [x] Tests: own-team highlight, H/A, W/D/L at home and away, no marks
+      without a team; Matches screen tests match on labels.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)

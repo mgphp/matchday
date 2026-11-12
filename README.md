@@ -11,7 +11,9 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
   derived from the opponent and competition prefilled with the last one used —
   `src/lib/fixture-defaults.ts`) against the
   coach's own team, warning (but not blocking) if a kickoff lands within two
-  hours of a fixture already in the diary
+  hours of a fixture already in the diary. Each card lists home then away with
+  scores, highlights the coach's own team, marks the game H / A, and shows
+  W / D / L once it's finished
 - **Squad** — players grouped under GK/DF/MF/FW section headers by main
   position, in a list that scrolls for squads too long for the screen; a player can have several positions (first pick is the main one)
   and is offered for any of them when picking a lineup. "Add player"
