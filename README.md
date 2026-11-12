@@ -4,8 +4,9 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
 
 ## Features
 
-- **Matches** — fixtures grouped under "Upcoming" (scheduled/live/postponed) and
-  "Previous" (finished) sections, with pull-to-refresh and a skeleton loading
+- **Matches** — fixtures grouped under "Upcoming" (scheduled/live/postponed,
+  soonest first) and "Previous" (finished, most recent first —
+  `src/lib/fixture-sections.ts`) sections, with pull-to-refresh and a skeleton loading
   state while fixtures load; "Add fixture" creates a new match (date chosen from an inline calendar) against the
   coach's own team, warning (but not blocking) if a kickoff lands within two
   hours of a fixture already in the diary
