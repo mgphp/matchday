@@ -1,12 +1,17 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { Card } from '@/components/card';
+import { ChoiceChips } from '@/components/choice-chips';
 import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { StateView } from '@/components/state-view';
+import { TextField } from '@/components/text-field';
 import { repository } from '@/lib/data';
 import { useFavouriteTeam } from '@/lib/favourite-team';
+import { FORMAT_SIZES, defaultDurationFor, useMatchFormat } from '@/lib/match-format';
+import { useTeam } from '@/lib/team-context';
 import type { Team } from '@/lib/types';
 import { useData } from '@/lib/use-data';
 import { colors, spacing, typography } from '@/theme/theme';
@@ -42,12 +47,60 @@ function TeamRow({
   );
 }
 
+const SIZE_OPTIONS = FORMAT_SIZES.map(String);
+const SIZE_LABELS = Object.fromEntries(SIZE_OPTIONS.map((size) => [size, `${size}-a-side`]));
+
+/** Team size and default match length, for every match without its own. */
+function MatchFormatCard() {
+  const team = useTeam();
+  const { format, isLoaded, setTeamSize, setDurationMinutes } = useMatchFormat(team.id);
+  const [duration, setDuration] = useState(String(format.durationMinutes));
+
+  // Follow the stored value (load, or a size change resetting the length).
+  const [syncedMinutes, setSyncedMinutes] = useState(format.durationMinutes);
+  if (syncedMinutes !== format.durationMinutes) {
+    setSyncedMinutes(format.durationMinutes);
+    setDuration(String(format.durationMinutes));
+  }
+
+  if (!isLoaded) return <StateView state="loading" />;
+
+  const handleDuration = (text: string) => {
+    setDuration(text);
+    const minutes = Number(text);
+    if (text.length > 0 && Number.isInteger(minutes) && minutes > 0) setDurationMinutes(minutes);
+  };
+
+  return (
+    <Card>
+      <ChoiceChips
+        label="Team size"
+        options={SIZE_OPTIONS}
+        optionLabels={SIZE_LABELS}
+        value={String(format.teamSize)}
+        onChange={(size) => setTeamSize(Number(size))}
+      />
+      <TextField
+        label="Match length (minutes)"
+        value={duration}
+        onChangeText={handleDuration}
+        keyboardType="number-pad"
+      />
+      <Text style={styles.hint}>
+        {`Used for any match without its own length. ${format.teamSize}-a-side usually plays ${defaultDurationFor(format.teamSize)} minutes; Edit match can still change one match.`}
+      </Text>
+    </Card>
+  );
+}
+
 export default function SettingsScreen() {
   const { status, data, reload } = useData(repository.getTable);
   const { teamId, isLoaded, setFavouriteTeam } = useFavouriteTeam();
 
   return (
     <Screen>
+      <SectionHeader title="Match format" variant="accent" />
+      <MatchFormatCard />
       <SectionHeader title="Favourite team" variant="accent" />
       {status === 'loading' || !isLoaded ? (
         <StateView state="loading" />
@@ -85,5 +138,9 @@ const styles = StyleSheet.create({
   name: {
     ...typography.body,
     color: colors.text,
+  },
+  hint: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
 });

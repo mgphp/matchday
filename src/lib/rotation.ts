@@ -1,8 +1,5 @@
 import type { PlayerMinutes } from '@/lib/player-minutes';
 
-/** Fallback full-time length when a match doesn't specify one. */
-export const DEFAULT_DURATION_MINUTES = 90;
-
 /**
  * How far off the pro-rata share a player can drift before it is worth
  * flagging. Small enough to be useful, large enough that the whole squad

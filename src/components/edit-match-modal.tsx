@@ -17,7 +17,7 @@ import { Screen } from '@/components/screen';
 import { SectionHeader } from '@/components/section-header';
 import { TextField } from '@/components/text-field';
 import { ApiError, type MatchScoreUpdate } from '@/lib/data/repository';
-import { DEFAULT_DURATION_MINUTES } from '@/lib/rotation';
+import { DEFAULT_MATCH_FORMAT } from '@/lib/match-format';
 import type { Match, MatchStatus } from '@/lib/types';
 import { colors, spacing, typography } from '@/theme/theme';
 
@@ -57,12 +57,15 @@ export function EditMatchModal({
   visible,
   onClose,
   match,
+  defaultDurationMinutes = DEFAULT_MATCH_FORMAT.durationMinutes,
   onSubmit,
   onRemove,
 }: {
   visible: boolean;
   onClose: () => void;
   match: Match;
+  /** The team's format length, used when the match has none of its own. */
+  defaultDurationMinutes?: number;
   onSubmit: (update: MatchScoreUpdate) => Promise<void>;
   /** Deletes the fixture. The caller navigates away once it resolves. */
   onRemove: () => Promise<void>;
@@ -71,7 +74,7 @@ export function EditMatchModal({
   const [homeScore, setHomeScore] = useState(match.homeScore?.toString() ?? '');
   const [awayScore, setAwayScore] = useState(match.awayScore?.toString() ?? '');
   const [duration, setDuration] = useState(
-    (match.durationMinutes ?? DEFAULT_DURATION_MINUTES).toString(),
+    (match.durationMinutes ?? defaultDurationMinutes).toString(),
   );
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);

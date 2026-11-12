@@ -769,6 +769,29 @@ fixture used a warning panel with Cancel / Delete.
 - [x] Convention recorded in CONTRIBUTING. Tests: the component (trigger,
       confirm, cancel, failure, disabled) and updated player-removal flows.
 
+### M5.9 — Match length from team size ([#76](https://github.com/mgphp/matchday/issues/76))
+
+Every match without its own length assumed 90 minutes, so rotation targets and
+the sub plan were wrong for small-sided football until each match was edited.
+
+- [x] `src/lib/match-format.ts` — `defaultDurationFor(teamSize)` (FA
+      grassroots formats: 5v5 40', 7v7 50', 9v9 60', 11v11 90'; in-between
+      sizes take the smaller format) and `useMatchFormat(teamId)`, the team's
+      size + length persisted on-device per team. Default 7-a-side, 50'.
+      Replaces `DEFAULT_DURATION_MINUTES` (90).
+- [x] Settings gains a **Match format** card: team size chips (changing size
+      resets the length to that format's default) and an editable length.
+- [x] Match centre, rotation plan and Edit match fall back to the team length
+      when a match has no `durationMinutes`; Edit match still overrides per
+      match. The lineup editor starts at the team size when a match has no
+      formation.
+- [x] No API change: new fixtures don't store a length, they inherit it.
+- [x] Tests: the size → length mapping, the hook (default, per team, corrupt
+      data, reset + override), Settings card, Edit match default, and the
+      match-centre fallback.
+- **Not done here:** the format is per device, not synced to `matchday-api`
+  (fits with the Settings rebuild, #69).
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)
