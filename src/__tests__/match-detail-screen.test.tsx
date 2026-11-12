@@ -242,4 +242,80 @@ describe('MatchDetailScreen', () => {
 
     await mockRepository.updateMatchScore('m1', { status: 'live', durationMinutes: undefined });
   });
+
+  describe('before kick-off', () => {
+    beforeEach(() => {
+      // m2 is scheduled; the coach's team is the away side there.
+      jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'm2' });
+    });
+
+    afterEach(async () => {
+      await mockRepository.updateLineup('m2', { side: 'away', players: [] });
+      await mockRepository.updateMatchScore('m2', {
+        status: 'scheduled',
+        durationMinutes: undefined,
+      });
+    });
+
+    it('prompts for a lineup when none is set', async () => {
+      const { findByText, queryByText } = await renderScreen();
+
+      expect(await findByText(/Set your lineup to see when to make each sub/)).toBeTruthy();
+      expect(queryByText('Planned minutes')).toBeNull();
+    });
+
+    it('plans every sub and each player’s minutes from the starting lineup', async () => {
+      const squad = await mockRepository.getSquad();
+      // Keeper + 4 outfield start; 2 outfielders on the bench, over 60 minutes.
+      await mockRepository.updateLineup('m2', { side: 'away', players: squad.slice(0, 5) });
+      await mockRepository.updateMatchScore('m2', { status: 'scheduled', durationMinutes: 60 });
+
+      const { findByText, getByText, getByLabelText, queryByText } = await renderScreen();
+      await findByText('Planned minutes');
+
+      // 60' × 4 outfield slots ÷ 6 outfielders = 40' each.
+      expect(getByText(/Even share ≈ 40/)).toBeTruthy();
+      expect(getByText(/Planned for a 60/)).toBeTruthy();
+      // Two on the bench out of six → three equal spells, breaks at 20' and 40'.
+      expect(getByLabelText(/At 20 minutes: .+ on for .+, .+ on for .+/)).toBeTruthy();
+      expect(getByLabelText(/At 40 minutes: .+ on for .+, .+ on for .+/)).toBeTruthy();
+
+      // The keeper plays it all and is never in a swap.
+      expect(getByLabelText(`${squad[0].name}, goalkeeper, planned 60 minutes`)).toBeTruthy();
+      expect(queryByText(new RegExp(`↓ ${squad[0].squadNumber} ${squad[0].name}`))).toBeNull();
+      // Every outfielder — starter or bench — lands on the even share.
+      for (const starter of squad.slice(1, 5)) {
+        expect(getByLabelText(`${starter.name}, starts, planned 40 minutes`)).toBeTruthy();
+      }
+      for (const sub of squad.slice(5)) {
+        expect(getByLabelText(`${sub.name}, starts on the bench, planned 40 minutes`)).toBeTruthy();
+      }
+
+      // Still no "minutes played" before the match starts.
+      expect(queryByText('Minutes played')).toBeNull();
+    });
+
+    it('leaves a player who is not available out of the plan', async () => {
+      const squad = await mockRepository.getSquad();
+      await mockRepository.updateLineup('m2', {
+        side: 'away',
+        players: squad.slice(0, 5),
+        availablePlayerIds: squad.slice(0, 6).map((player) => player.id),
+      });
+
+      const { findByText, queryByLabelText } = await renderScreen();
+      await findByText('Planned minutes');
+
+      expect(queryByLabelText(new RegExp(`^${squad[6].name},`))).toBeNull();
+    });
+
+    it('says so when the whole squad starts and nobody needs subbing', async () => {
+      const squad = await mockRepository.getSquad();
+      await mockRepository.updateLineup('m2', { side: 'away', players: squad });
+
+      const { findByText } = await renderScreen();
+
+      expect(await findByText(/everyone plays the full match/)).toBeTruthy();
+    });
+  });
 });

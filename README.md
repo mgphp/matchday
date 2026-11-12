@@ -46,6 +46,10 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
   live clock and the subs already recorded, so drift self-corrects. The
   goalkeeper is held out of the maths but can still be swapped by hand
   (`src/lib/rotation-plan.ts`)
+- **Pre-match plan** — before kick-off, once a lineup is set, the same
+  Rotation plan card lists every planned sub (minute, who comes on, who goes
+  off) and each player's planned minutes and whether they start. The
+  goalkeeper stays on for the whole match; set the match length in "Edit match"
 - **Substitutions** — while a match is live, "Substitution" records who came
   off, who came on and at what minute (defaulting to the clock). The timeline
   and the on-pitch/bench split both follow from these events
