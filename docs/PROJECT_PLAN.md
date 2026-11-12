@@ -717,6 +717,15 @@ timeline.
       before kick-off).
 - **Not done here:** own goals, assists, and second-yellow → red logic.
 
+### M5.5 — Own lineup only ([#73](https://github.com/mgphp/matchday/issues/73))
+
+The Lineups card drew a home and an away column, but the app never records the
+opponent's lineup, so one column was always empty.
+
+- [x] The card (now "Lineup") shows only our side, with its formation; with no
+      lineup set it points at Edit lineup.
+- [x] Tests: opponent column gone, empty-lineup prompt.
+
 ## Definition of done (every milestone)
 
 - Runs from a clean clone (`npm install && npm start`)

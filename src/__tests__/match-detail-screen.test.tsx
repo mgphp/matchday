@@ -37,7 +37,24 @@ describe('MatchDetailScreen', () => {
     // Once in the events timeline, once in the minutes-played list.
     expect(getAllByText('Jamie Cole').length).toBeGreaterThan(0);
     expect(getByText('assist Ryo Tanaka')).toBeTruthy();
-    expect(getByText('13 Felix Ndiaye')).toBeTruthy();
+  });
+
+  it('shows only our lineup, never an empty opponent column', async () => {
+    const { findByText, getByText, queryByText } = await renderScreen();
+    await findByText('Northgate Rovers 1 – 0 Harbour City');
+
+    expect(getByText('Lineup')).toBeTruthy();
+    expect(getByText('NGR')).toBeTruthy();
+    expect(queryByText('HBC')).toBeNull();
+    expect(queryByText('13 Felix Ndiaye')).toBeNull();
+  });
+
+  it('prompts for a lineup when ours is not set', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'm4' });
+
+    const { findByText } = await renderScreen();
+
+    expect(await findByText(/No lineup set yet/)).toBeTruthy();
   });
 
   it('summarises the single goal scorer under the scoreline', async () => {
