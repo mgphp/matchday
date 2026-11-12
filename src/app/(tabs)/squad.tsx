@@ -71,15 +71,17 @@ export default function SquadScreen() {
       ) : data.length === 0 ? (
         <StateView state="empty" message="No players in the squad." />
       ) : (
-        <Card>
+        // flexShrink lets the card hug a short squad but stop at the screen
+        // edge for a long one, where the list then scrolls inside it.
+        <Card style={styles.listCard}>
           <SectionList
+            testID="squad-list"
             sections={groupByPosition(data)}
             keyExtractor={(player) => player.id}
             renderItem={({ item }) => (
               <PlayerRow player={item} onPress={() => setEditingPlayer(item)} />
             )}
             renderSectionHeader={({ section }) => <SectionHeader title={section.title} />}
-            scrollEnabled={false}
             stickySectionHeadersEnabled={false}
             disableVirtualization
           />
@@ -126,6 +128,9 @@ export default function SquadScreen() {
 }
 
 const styles = StyleSheet.create({
+  listCard: {
+    flexShrink: 1,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
