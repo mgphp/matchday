@@ -57,7 +57,11 @@ export default function MatchesScreen() {
           sections={groupByStatus(data, teamId)}
           keyExtractor={(match) => match.id}
           renderItem={({ item }) => (
-            <MatchCard match={item} onPress={() => router.push(`/match/${item.id}`)} />
+            <MatchCard
+              match={item}
+              ownTeamId={ownTeam.id}
+              onPress={() => router.push(`/match/${item.id}`)}
+            />
           )}
           renderSectionHeader={({ section }) => <SectionHeader title={section.title} />}
           stickySectionHeadersEnabled={false}

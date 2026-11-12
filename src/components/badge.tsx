@@ -2,7 +2,7 @@ import { StyleSheet, Text, View, type ViewProps } from 'react-native';
 
 import { colors, radii, spacing, typography } from '@/theme/theme';
 
-type BadgeVariant = 'default' | 'alert' | 'live';
+type BadgeVariant = 'default' | 'alert' | 'live' | 'neutral' | 'danger';
 
 type BadgeProps = ViewProps & {
   label: string;
@@ -34,10 +34,14 @@ const variants = StyleSheet.create({
   default: { backgroundColor: colors.accentMuted },
   alert: { backgroundColor: colors.alertMuted },
   live: { backgroundColor: colors.alert },
+  neutral: { backgroundColor: colors.surfaceRaised },
+  danger: { backgroundColor: colors.danger },
 });
 
 const labels = StyleSheet.create({
   default: { color: colors.accent },
   alert: { color: colors.alert },
   live: { color: colors.textOnAccent },
+  neutral: { color: colors.textSecondary },
+  danger: { color: colors.textOnAccent },
 });

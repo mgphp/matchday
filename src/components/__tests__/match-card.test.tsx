@@ -1,6 +1,7 @@
 import { render, userEvent } from '@testing-library/react-native';
 
 import type { Match } from '@/lib/types';
+import { colors } from '@/theme/theme';
 
 import { MatchCard } from '../match-card';
 
@@ -26,7 +27,8 @@ describe('MatchCard', () => {
   it('shows kickoff time only for a fixture on the current day', async () => {
     const { getByText } = await render(<MatchCard match={base} />);
     expect(getByText('19:45')).toBeTruthy();
-    expect(getByText('Northgate Rovers v Harbour City')).toBeTruthy();
+    expect(getByText('Northgate Rovers')).toBeTruthy();
+    expect(getByText('Harbour City')).toBeTruthy();
   });
 
   it('shows kickoff date and time for a fixture on another day', async () => {
@@ -39,7 +41,8 @@ describe('MatchCard', () => {
     const live: Match = { ...base, status: 'live', homeScore: 1, awayScore: 0, minute: 62 };
     const { getByText } = await render(<MatchCard match={live} />);
     expect(getByText("LIVE 62'")).toBeTruthy();
-    expect(getByText('Northgate Rovers 1 – 0 Harbour City')).toBeTruthy();
+    expect(getByText('1')).toBeTruthy();
+    expect(getByText('0')).toBeTruthy();
   });
 
   it('calls onPress when tapped', async () => {
@@ -61,5 +64,52 @@ describe('MatchCard', () => {
     const postponed: Match = { ...base, status: 'postponed' };
     const { getByText } = await render(<MatchCard match={postponed} />);
     expect(getByText('Postponed')).toBeTruthy();
+  });
+
+  it('hides scores before kick-off', async () => {
+    const { queryByText } = await render(<MatchCard match={base} />);
+    expect(queryByText('0')).toBeNull();
+  });
+
+  it('marks our side, home or away, without a result before full time', async () => {
+    const { getByText, queryByText, getByLabelText } = await render(
+      <MatchCard
+        match={{ ...base, home: base.away, away: base.home }}
+        ownTeamId="a"
+        onPress={() => {}}
+      />,
+    );
+    expect(getByText('A')).toBeTruthy();
+    expect(queryByText('W')).toBeNull();
+    expect(getByText('Northgate Rovers')).toHaveStyle({ color: colors.accent });
+    expect(getByText('Harbour City')).not.toHaveStyle({ color: colors.accent });
+    expect(getByLabelText(/Premier League, away game, kick-off/)).toBeTruthy();
+  });
+
+  it.each([
+    [2, 1, 'W', 'won'],
+    [1, 1, 'D', 'drew'],
+    [0, 3, 'L', 'lost'],
+  ])('shows %i–%i at home as %s', async (homeScore, awayScore, letter, word) => {
+    const finished: Match = { ...base, status: 'finished', homeScore, awayScore };
+    const { getByText, getByLabelText } = await render(
+      <MatchCard match={finished} ownTeamId="a" onPress={() => {}} />,
+    );
+    expect(getByText('H')).toBeTruthy();
+    expect(getByText(letter)).toBeTruthy();
+    expect(getByLabelText(new RegExp(`home game, ${word}, full time$`))).toBeTruthy();
+  });
+
+  it('reads the result from our side when away', async () => {
+    const finished: Match = { ...base, status: 'finished', homeScore: 2, awayScore: 1 };
+    const { getByText } = await render(<MatchCard match={finished} ownTeamId="b" />);
+    expect(getByText('L')).toBeTruthy();
+  });
+
+  it('marks nothing without an own team', async () => {
+    const finished: Match = { ...base, status: 'finished', homeScore: 2, awayScore: 1 };
+    const { queryByText } = await render(<MatchCard match={finished} />);
+    expect(queryByText('H')).toBeNull();
+    expect(queryByText('W')).toBeNull();
   });
 });

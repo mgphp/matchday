@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, typography } from '@/theme/theme';
-import type { Match } from '@/lib/types';
+import type { Match, Team } from '@/lib/types';
+import { colors, spacing, typography } from '@/theme/theme';
 
 import { Badge } from './badge';
 import { Card } from './card';
@@ -69,21 +69,93 @@ function statusText(match: Match) {
   }
 }
 
-export function MatchCard({ match, onPress }: { match: Match; onPress?: () => void }) {
+type Result = 'W' | 'D' | 'L';
+
+const RESULT_WORDS: Record<Result, string> = { W: 'won', D: 'drew', L: 'lost' };
+const RESULT_BADGES = { W: 'default', D: 'neutral', L: 'danger' } as const;
+
+/** Our result in a finished match, from our side's point of view. */
+export function resultFor(match: Match, side: 'home' | 'away'): Result | undefined {
+  if (match.status !== 'finished' || match.homeScore == null || match.awayScore == null) {
+    return undefined;
+  }
+  const ours = side === 'home' ? match.homeScore : match.awayScore;
+  const theirs = side === 'home' ? match.awayScore : match.homeScore;
+  return ours > theirs ? 'W' : ours < theirs ? 'L' : 'D';
+}
+
+function TeamRow({ team, score, isOwn }: { team: Team; score?: number; isOwn: boolean }) {
+  return (
+    <View style={styles.teamRow}>
+      {/* A crest (#58) slots in here, left of the name. */}
+      <Text style={[styles.teamName, isOwn && styles.ownTeam]} numberOfLines={1}>
+        {team.name}
+      </Text>
+      {score != null ? <Text style={[styles.score, isOwn && styles.ownTeam]}>{score}</Text> : null}
+    </View>
+  );
+}
+
+/**
+ * One fixture in the Matches list. With `ownTeamId`, our side is highlighted,
+ * the card says Home / Away, and a finished match shows W / D / L.
+ */
+export function MatchCard({
+  match,
+  ownTeamId,
+  onPress,
+}: {
+  match: Match;
+  ownTeamId?: string;
+  onPress?: () => void;
+}) {
+  const side =
+    match.home.id === ownTeamId ? 'home' : match.away.id === ownTeamId ? 'away' : undefined;
+  const result = side ? resultFor(match, side) : undefined;
+  const hasScore = match.status === 'live' || match.status === 'finished';
+  const label = [
+    scoreline(match),
+    match.competition,
+    side ? `${side} game` : undefined,
+    result ? RESULT_WORDS[result] : undefined,
+    statusText(match),
+  ]
+    .filter(Boolean)
+    .join(', ');
+
   return (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={`${scoreline(match)}, ${match.competition}, ${statusText(match)}`}
+      accessibilityLabel={label}
       onPress={onPress}
       disabled={!onPress}
       style={({ pressed }) => pressed && styles.pressed}
     >
       <Card>
         <View style={styles.row}>
-          {statusBadge(match)}
-          <Text style={styles.competition}>{match.competition}</Text>
+          <View style={styles.badges}>
+            {statusBadge(match)}
+            {result ? <Badge label={result} variant={RESULT_BADGES[result]} /> : null}
+          </View>
+          <View style={styles.meta}>
+            <Text style={styles.competition} numberOfLines={1}>
+              {match.competition}
+            </Text>
+            {side ? <Badge label={side === 'home' ? 'H' : 'A'} variant="neutral" /> : null}
+          </View>
         </View>
-        <Text style={styles.fixture}>{scoreline(match)}</Text>
+        <View>
+          <TeamRow
+            team={match.home}
+            score={hasScore ? match.homeScore : undefined}
+            isOwn={side === 'home'}
+          />
+          <TeamRow
+            team={match.away}
+            score={hasScore ? match.awayScore : undefined}
+            isOwn={side === 'away'}
+          />
+        </View>
       </Card>
     </Pressable>
   );
@@ -102,8 +174,32 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
   },
-  fixture: {
+  badges: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  meta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flexShrink: 1,
+  },
+  teamRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  teamName: {
     ...typography.heading,
     color: colors.text,
+    flex: 1,
+  },
+  score: {
+    ...typography.heading,
+    color: colors.text,
+  },
+  ownTeam: {
+    color: colors.accent,
+    fontWeight: '700',
   },
 });
