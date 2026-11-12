@@ -7,7 +7,9 @@ Mobile app built with [Expo](https://expo.dev) (SDK 57), TypeScript and [expo-ro
 - **Matches** — fixtures grouped under "Upcoming" (scheduled/live/postponed,
   soonest first) and "Previous" (finished, most recent first —
   `src/lib/fixture-sections.ts`) sections, with pull-to-refresh and a skeleton loading
-  state while fixtures load; "Add fixture" creates a new match (date chosen from an inline calendar) against the
+  state while fixtures load; "Add fixture" creates a new match (date from an inline calendar, kick-off from 15-minute slots; short name
+  derived from the opponent and competition prefilled with the last one used —
+  `src/lib/fixture-defaults.ts`) against the
   coach's own team, warning (but not blocking) if a kickoff lands within two
   hours of a fixture already in the diary
 - **Squad** — players grouped under GK/DF/MF/FW section headers by main
@@ -170,6 +172,7 @@ matchday
 │   │   ├── coach-api.ts # club/coach/team management endpoints (registration, onboarding)
 │   │   ├── types.ts   # domain models (Match, Standing, Player)
 │   │   ├── use-data.ts # async data hook (loading/error/success)
+│   │   ├── fixture-defaults.ts # derived opponent short name + last competition, via AsyncStorage
 │   │   ├── match-format.ts # team size + default match length, per team, via AsyncStorage
 │   │   └── favourite-team.ts # favourite team, persisted via AsyncStorage
 │   └── theme
